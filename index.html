@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IRONBOUND RPG | PersonaEngine</title>
+    <style>
+        body { background: #0a0a0a; color: #22ff22; font-family: 'Courier New', Courier, monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
+        #crt-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 10; }
+        #terminal { width: 80%; max-width: 800px; height: 600px; border: 2px solid #22ff22; padding: 20px; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 20px rgba(34, 255, 34, 0.2); }
+        #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 10px; margin-bottom: 20px; font-size: 0.8em; }
+        #output { flex-grow: 1; overflow-y: auto; margin-bottom: 20px; white-space: pre-wrap; line-height: 1.4; }
+        #input-area { display: flex; border-top: 1px solid #22ff22; padding-top: 10px; }
+        #prompt { margin-right: 10px; }
+        #user-input { background: none; border: none; color: #22ff22; font-family: inherit; font-size: inherit; flex-grow: 1; outline: none; }
+        .gate-indicator { display: flex; align-items: center; }
+        .light { width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; background: #550000; }
+        .light.active { background: #ff0000; box-shadow: 0 0 10px #ff0000; }
+        #status-text { text-transform: uppercase; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="crt-overlay"></div>
+    <div id="terminal">
+        <div id="header">
+            <div>PERSONAENGINE v1.3 // IRONBOUND</div>
+            <div class="gate-indicator">
+                <div class="light active" id="gate-light"></div>
+                STATE: <span id="status-text">GUARDED</span>
+            </div>
+            <div id="countdown">EXECUTION IN: 180m</div>
+        </div>
+        <div id="output">
+[ SYSTEM INITIALIZED ]
+[ LOGIC-GATES ACTIVE ]
+[ LINGUISTIC FINGERPRINT: GRIM_BUREAUCRAT ]
+
+The stone walls are weeping. A single torch flickers outside your cell, casting long, hungry shadows across the straw. 
+
+The Jailor sits at a small desk, his quill scratching rhythmically against a ledger. He doesn't look up. He knows you're there. He knows you have until dawn.
+
+What do you do?</div>
+        <div id="input-area">
+            <span id="prompt">></span>
+            <input type="text" id="user-input" autofocus autocomplete="off">
+        </div>
+    </div>
+</body>
+</html>
