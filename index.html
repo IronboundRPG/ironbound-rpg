@@ -44,5 +44,57 @@ What do you do?</div>
             <input type="text" id="user-input" autofocus autocomplete="off">
         </div>
     </div>
+<script>
+    const input = document.getElementById('user-input');
+    const output = document.getElementById('output');
+    const statusText = document.getElementById('status-text');
+
+    input.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter' && input.value.trim() !== '') {
+            const userText = input.value;
+            input.value = ''; // Clear input
+            
+            // Append your message to the screen
+            output.textContent += `\n\n> ${userText}`;
+            output.scrollTop = output.scrollHeight;
+
+            // Show system processing
+            const loadingMsg = document.createElement('span');
+            loadingMsg.textContent = "\n[ SYSTEM ANALYZING... ]";
+            output.appendChild(loadingMsg);
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: userText })
+                });
+
+                const data = await response.json();
+                output.removeChild(loadingMsg); // Remove loading text
+
+                // High-fidelity typewriter effect for the AI response
+                typeWriter(`\n\n${data.reply}`, output);
+
+            } catch (err) {
+                console.error(err);
+                output.textContent += `\n\n[ CRITICAL ERROR: SIGNAL INTERRUPTED ]`;
+            }
+        }
+    });
+
+    function typeWriter(text, element) {
+        let i = 0;
+        function type() {
+            if (i < text.length) {
+                element.textContent += text.charAt(i);
+                i++;
+                element.scrollTop = element.scrollHeight;
+                setTimeout(type, 25); // Controls the speed of the DM's voice
+            }
+        }
+        type();
+    }
+</script>
 </body>
 </html>
