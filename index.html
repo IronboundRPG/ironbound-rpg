@@ -5,32 +5,30 @@
     <title>IRONBOUND RPG | PersonaEngine</title>
     <style>
         body { background: #0a0a0a; color: #22ff22; font-family: 'Courier New', Courier, monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-        #crt-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 10; }
-        #terminal { width: 80%; max-width: 800px; height: 600px; border: 2px solid #22ff22; padding: 20px; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 20px rgba(34, 255, 34, 0.2); }
-        #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 10px; margin-bottom: 20px; font-size: 0.8em; }
-        #output { flex-grow: 1; overflow-y: auto; margin-bottom: 20px; white-space: pre-wrap; line-height: 1.4; }
-        #input-area { display: flex; border-top: 1px solid #22ff22; padding-top: 10px; }
-        #prompt { margin-right: 10px; }
-        #user-input { background: none; border: none; color: #22ff22; font-family: inherit; font-size: inherit; flex-grow: 1; outline: none; }
+        #crt-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 10; }
+        #terminal { width: 90%; max-width: 850px; height: 80vh; border: 2px solid #22ff22; padding: 25px; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 15px rgba(34, 255, 34, 0.1); }
+        #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 15px; margin-bottom: 20px; font-size: 0.85em; opacity: 0.8; }
+        #output { flex-grow: 1; overflow-y: auto; margin-bottom: 25px; white-space: pre-wrap; line-height: 1.5; scroll-behavior: smooth; }
+        #input-area { display: flex; border-top: 1px solid #22ff22; padding-top: 15px; }
+        #prompt { margin-right: 12px; font-weight: bold; }
+        #user-input { background: none; border: none; color: #22ff22; font-family: inherit; font-size: inherit; flex-grow: 1; outline: none; caret-color: #22ff22; }
         .gate-indicator { display: flex; align-items: center; }
-        .light { width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; background: #550000; }
-        .light.active { background: #ff0000; box-shadow: 0 0 10px #ff0000; }
-        #status-text { text-transform: uppercase; font-weight: bold; }
+        .light { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; background: #ff0000; box-shadow: 0 0 8px #ff0000; }
+        #status-text { font-weight: bold; letter-spacing: 1px; }
     </style>
 </head>
 <body>
     <div id="crt-overlay"></div>
     <div id="terminal">
         <div id="header">
-            <div>PERSONAENGINE v1.3 // IRONBOUND</div>
+            <div>PERSONAENGINE // IRONBOUND v1.3</div>
             <div class="gate-indicator">
-                <div class="light active" id="gate-light"></div>
+                <div class="light" id="gate-light"></div>
                 STATE: <span id="status-text">GUARDED</span>
             </div>
-            <div id="countdown">EXECUTION IN: 180m</div>
+            <div>EXECUTION IN: 180m</div>
         </div>
-        <div id="output">
-[ SYSTEM INITIALIZED ]
+        <div id="output">[ SYSTEM INITIALIZED ]
 [ LOGIC-GATES ACTIVE ]
 [ LINGUISTIC FINGERPRINT: GRIM_BUREAUCRAT ]
 
@@ -41,60 +39,72 @@ The Jailor sits at a small desk, his quill scratching rhythmically against a led
 What do you do?</div>
         <div id="input-area">
             <span id="prompt">></span>
-            <input type="text" id="user-input" autofocus autocomplete="off">
+            <input type="text" id="user-input" autofocus autocomplete="off" placeholder="Type your action...">
         </div>
     </div>
-<script>
-    const input = document.getElementById('user-input');
-    const output = document.getElementById('output');
-    const statusText = document.getElementById('status-text');
 
-    input.addEventListener('keydown', async (e) => {
-        if (e.key === 'Enter' && input.value.trim() !== '') {
-            const userText = input.value;
-            input.value = ''; // Clear input
-            
-            // Append your message to the screen
-            output.textContent += `\n\n> ${userText}`;
-            output.scrollTop = output.scrollHeight;
+    <script>
+        // Ensure the script runs only after everything is loaded
+        window.onload = () => {
+            const input = document.getElementById('user-input');
+            const output = document.getElementById('output');
 
-            // Show system processing
-            const loadingMsg = document.createElement('span');
-            loadingMsg.textContent = "\n[ SYSTEM ANALYZING... ]";
-            output.appendChild(loadingMsg);
+            // Force focus back to input if user clicks elsewhere
+            document.addEventListener('click', () => input.focus());
 
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: userText })
-                });
+            input.addEventListener('keydown', async (event) => {
+                // Check for 'Enter' key (code 13)
+                if (event.key === 'Enter') {
+                    event.preventDefault(); // Stop page from refreshing
+                    
+                    const val = input.value.trim();
+                    if (!val) return; // Don't send empty messages
 
-                const data = await response.json();
-                output.removeChild(loadingMsg); // Remove loading text
+                    input.value = ''; // Clear the line
+                    output.textContent += `\n\n> ${val}`;
+                    output.scrollTop = output.scrollHeight;
 
-                // High-fidelity typewriter effect for the AI response
-                typeWriter(`\n\n${data.reply}`, output);
+                    // Show visual feedback that system is thinking
+                    const loader = document.createElement('div');
+                    loader.textContent = "\n[ SYSTEM ANALYZING... ]";
+                    loader.style.opacity = "0.5";
+                    output.appendChild(loader);
 
-            } catch (err) {
-                console.error(err);
-                output.textContent += `\n\n[ CRITICAL ERROR: SIGNAL INTERRUPTED ]`;
+                    try {
+                        const response = await fetch('/api/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ message: val })
+                        });
+
+                        const data = await response.json();
+                        output.removeChild(loader);
+
+                        // Start the typewriter response
+                        typeOut(`\n\n${data.reply}`, output);
+
+                    } catch (err) {
+                        if(loader) output.removeChild(loader);
+                        output.textContent += `\n\n[ ERROR: SIGNAL LOST. CHECK VERCEL LOGS. ]`;
+                        console.error("Fetch error:", err);
+                    }
+                }
+            });
+        };
+
+        function typeOut(text, element) {
+            let i = 0;
+            const speed = 30; // ms per character
+            function type() {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    element.scrollTop = element.scrollHeight;
+                    setTimeout(type, speed);
+                }
             }
+            type();
         }
-    });
-
-    function typeWriter(text, element) {
-        let i = 0;
-        function type() {
-            if (i < text.length) {
-                element.textContent += text.charAt(i);
-                i++;
-                element.scrollTop = element.scrollHeight;
-                setTimeout(type, 25); // Controls the speed of the DM's voice
-            }
-        }
-        type();
-    }
-</script>
+    </script>
 </body>
 </html>
