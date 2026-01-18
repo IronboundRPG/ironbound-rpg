@@ -1,35 +1,32 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize the "Vault" connection
+// Initialize Supabase with the built-in environment variables
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { message } = req.body;
 
-  // 1. DATA FETCH: Check the "Source of Truth"
-  const { data: state, error } = await supabase
-    .from('ironbound_states')
-    .select('*')
-    .eq('player_name', 'Darren') // Hardcoded for your test
-    .single();
-
-  if (error) {
-    console.error("Database Error:", error);
-    return res.status(500).json({ reply: "[ THE SYSTEM STUTTERS... DB ERROR ]" });
-  }
-
-  // 2. LOGIC-GATE: Determine the "Hardened" behavior
-  // If the DB says they have no bribe, they are stuck in GUARDED mode.
-  const isTrusted = state.has_bribe_item === true;
-  const currentMode = isTrusted ? "TRUSTED" : "GUARDED";
-
-  // 3. BRAIN: Send the message with the Database-driven context
   try {
+    // 1. DATA FETCH: Check the "Source of Truth"
+    const { data: state, error: dbError } = await supabase
+      .from('ironbound_states')
+      .select('*')
+      .eq('player_name', 'Darren')
+      .single();
+
+    if (dbError) {
+      console.error("Database Error:", dbError);
+      return res.status(200).json({ reply: `[SYSTEM ERROR: DATABASE_UNREACHABLE] ${dbError.message}` });
+    }
+
+    const currentMode = state.has_bribe_item ? "TRUSTED" : "GUARDED";
+
+    // 2. BRAIN: Talk to OpenRouter using native fetch
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -38,28 +35,29 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "openai/gpt-4o-mini",
-   messages: [
-  { 
-    role: "system", 
-    content: `You are the Ironbound DM. Fingerprint: GRIM_BUREAUCRAT. 
-    DATABASE_STATE: ${currentMode}. 
-    MANDATORY: You must start every response with [STATE: ${currentMode}].
-    RULES: If DATABASE_STATE is GUARDED, you MUST mock the player and stay locked. 
-    If DATABASE_STATE is TRUSTED, you MUST accept the bribe and open the door.` 
-  },
-  { role: "user", content: message }
-]
+        messages: [
+          { 
+            role: "system", 
+            content: `You are the Ironbound DM. Fingerprint: GRIM_BUREAUCRAT. 
+            MANDATORY: You must start every response with [STATE: ${currentMode}].
+            If STATE is GUARDED, you must mock the player. 
+            If STATE is TRUSTED, you must accept the bribe and open the door.` 
+          },
+          { role: "user", content: message }
         ]
       })
     });
 
     const aiData = await response.json();
-    res.status(200).json({ 
-      reply: aiData.choices[0].message.content,
-      gate_state: currentMode // Sending this back so the UI can update!
-    });
+    
+    if (aiData.error) {
+       return res.status(200).json({ reply: `[AI ERROR: ${aiData.error.message}]` });
+    }
+
+    res.status(200).json({ reply: aiData.choices[0].message.content });
 
   } catch (error) {
-    res.status(500).json({ error: 'Signal lost' });
+    console.error("General Error:", error);
+    res.status(500).json({ reply: "[ THE SIGNAL DISSIPATED INTO THE VOID ]" });
   }
 }
