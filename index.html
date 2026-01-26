@@ -18,132 +18,25 @@
         /* MASSIVE CHARACTER LAYER */
         #character-layer {
             position: absolute;
-            bottom: -100px; /* Lowered slightly so he looms from below */
-            right: -5%;    /* Positioned further right */
-            width: 80%;    /* DOUBLED SIZE: from 45% to 80% */
-            height: 120vh; /* Taller than the screen for that "looming" feel */
-            background-image: url('dorn.jpg'); 
+            bottom: -100px; 
+            right: -5%;    
+            width: 80%;    
+            height: 120vh; 
+            background-image: url('dorn.png'); 
             background-size: contain;
             background-repeat: no-repeat;
             background-position: bottom right;
             opacity: 0; 
             filter: brightness(0.7) contrast(1.2);
-            /* This helps blend the character background into the dark scene */
             mix-blend-mode: screen; 
             z-index: 12; 
             transition: opacity 1.5s ease, filter 0.5s ease, transform 1s ease;
             pointer-events: none;
-            transform: translateY(50px); /* Small bounce-in effect when he appears */
+            transform: translateY(50px);
         }
 
         #crt-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 20; }
         
         #terminal { 
             width: 100%; max-width: 700px; height: 85vh; 
-            background: rgba(10, 10, 10, 0.9); 
-            border: 1px solid #22ff22; padding: 20px; 
-            display: flex; flex-direction: column; 
-            box-shadow: 0 0 20px rgba(34, 255, 34, 0.2); 
-            position: relative; z-index: 15; /* Above Dorn but below the CRT glow */
-            backdrop-filter: blur(10px);
-            margin-right: 35%; /* Pushes terminal left to let Big Dorn shine */
-        }
-
-        #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 10px; margin-bottom: 20px; font-size: 0.8em; }
-        #output { flex-grow: 1; overflow-y: auto; white-space: pre-wrap; margin-bottom: 20px; line-height: 1.4; text-shadow: 0 0 5px #22ff22; }
-        #input-form { display: flex; border-top: 1px solid #22ff22; padding-top: 10px; }
-        #user-input { background: transparent; border: none; color: #22ff22; font-family: inherit; font-size: 1em; flex-grow: 1; outline: none; }
-        
-        #timer-text { color: #ff0000; font-weight: bold; }
-        #door-status { font-weight: bold; color: #ff0000; }
-    </style>
-</head>
-<body>
-    <audio id="bg-music" loop>
-        <source src="creepy-ambient.mp3" type="audio/mpeg">
-    </audio>
-
-    <div id="character-layer"></div>
-    <div id="crt-overlay"></div>
-
-    <div id="terminal">
-        <div id="header">
-            <div class="status-box">
-                <div>PERSONAENGINE // IRONBOUND v1.5</div>
-                <div>STATE: <span id="status-text" style="color:#ff0000">GUARDED</span></div>
-            </div>
-            <div class="status-box" style="text-align: right;">
-                <div id="timer-text">EXECUTION: 180m</div>
-                <div>DOOR: <span id="door-status">LOCKED</span></div>
-            </div>
-        </div>
-        <div id="output">SYSTEM INITIALIZED... [ VISUALS ACTIVE ]</div>
-        <form id="input-form">
-            <span style="margin-right:10px">></span>
-            <input type="text" id="user-input" autofocus autocomplete="off" placeholder="Speak to the Jailor...">
-        </form>
-    </div>
-
-    <script>
-        const form = document.getElementById('input-form');
-        const input = document.getElementById('user-input');
-        const output = document.getElementById('output');
-        const statusText = document.getElementById('status-text');
-        const timerElement = document.getElementById('timer-text');
-        const doorStatus = document.getElementById('door-status');
-        const bgMusic = document.getElementById('bg-music');
-        const charLayer = document.getElementById('character-layer');
-
-        function updateUI(data) {
-            if (data.has_bribe) {
-                statusText.textContent = "TRUSTED";
-                statusText.style.color = "#22ff22";
-            }
-            if (data.is_locked === false) {
-                doorStatus.textContent = "OPEN";
-                doorStatus.style.color = "#22ff22";
-            }
-            if (data.minutes_left !== undefined) {
-                timerElement.textContent = `EXECUTION: ${data.minutes_left}m`;
-            }
-        }
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (bgMusic.paused) {
-                bgMusic.play().catch(() => {});
-                bgMusic.volume = 0.15;
-            }
-
-            const message = input.value.trim();
-            if (!message) return;
-            input.value = '';
-            output.textContent += `\n\n> ${message}`;
-            
-            // Appearance Logic
-            charLayer.style.opacity = "1";
-            charLayer.style.transform = "translateY(0)";
-
-            try {
-                const res = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
-                });
-                const data = await res.json();
-                
-                // Visual Pulse when speaking
-                charLayer.style.filter = "brightness(1.1) contrast(1.3)";
-                setTimeout(() => { charLayer.style.filter = "brightness(0.7) contrast(1.1)"; }, 400);
-
-                output.textContent += `\n\n${data.reply}`;
-                updateUI(data);
-                output.scrollTop = output.scrollHeight;
-            } catch (err) {
-                output.textContent += "\n\n[ ERROR: SIGNAL LOST ]";
-            }
-        });
-    </script>
-</body>
-</html>
+            background: rgba(10
