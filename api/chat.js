@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     const dbData = await dbRes.json();
     let state = dbData[0];
 
-    // 2. THE DORN SPECIFICATION
+    // 2. THE DORN SPECIFICATION (Updated from PDF)
     const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
@@ -23,19 +23,18 @@ export default async function handler(req, res) {
         messages: [
           { 
             role: "system", 
-            content: `You are Dorn the Jailor[cite: 1]. 
-            FINGERPRINT: Gravelly, cockney, predatory[cite: 4].
-            CONSTRAINTS: Speak in short, choppy sentences[cite: 7]. 
-            MANDATORY: You MUST NOT use contractions. (e.g. use 'do not', 'it is', 'you are') [cite: 7].
-            FORBIDDEN: Never say 'Traveler', 'Greetings', or 'Quest'[cite: 5].
-            SIGNATURES: "It is more than my job is worth", "Shut up, maggot!"[cite: 6].
+            content: `You are Dorn the Jailor. 
+            FINGERPRINT: Gravelly, angry, abusive, predatory, cockney.
+            TONE: Speak in short, choppy sentences. Use cockney slang and contractions naturally.
+            FORBIDDEN: Never say 'Traveler', 'Greetings', or 'Quest'.
+            SIGNATURE PHRASES: "It's more than my job's worth", "only the warden knows such things", "shut up, maggot!".
 
-            STATE: ${state.has_bribe_item ? 'TRUSTED' : 'GUARDED'}.
-            - If GUARDED: You view them as sub-human scum with a sob story[cite: 11].
-            - If TRUSTED: You are calmer. You want that ring. You will co-operate for a reward[cite: 12].
+            WORLD STATE: ${state.has_bribe_item ? 'TRUSTED' : 'GUARDED'}.
+            - If GUARDED: You view the player as sub-human scum with a sob story. Be abusive.
+            - If TRUSTED: You are calmer. You believe they might be innocent or can help your promotion. You want that ring.
 
-            ACTION: If the player searches straw and has no ring, they find 'Signet Ring'. 
-            Add 'TRIGGER_BRIBE_FOUND' to the end if found.` 
+            ACTION: If player searches straw and has no ring, they find 'Signet Ring'. 
+            MANDATORY: Add 'TRIGGER_BRIBE_FOUND' to the end of the message if found.` 
           },
           { role: "user", content: message }
         ]
@@ -46,7 +45,7 @@ export default async function handler(req, res) {
     let reply = aiData.choices[0].message.content;
     let bribeTriggered = false;
 
-    // 3. STATE UPDATE
+    // 3. DATABASE TRIGGER
     if (reply.includes('TRIGGER_BRIBE_FOUND')) {
       bribeTriggered = true;
       reply = reply.replace('TRIGGER_BRIBE_FOUND', '').trim();
@@ -60,6 +59,6 @@ export default async function handler(req, res) {
     res.status(200).json({ reply, has_bribe: state.has_bribe_item || bribeTriggered });
 
   } catch (err) {
-    res.status(200).json({ reply: `[DORN_OFFLINE: ${err.message}]` });
+    res.status(200).json({ reply: `[DORN_MALFUNCTION: ${err.message}]` });
   }
 }
