@@ -62,6 +62,20 @@ What do you do?</div>
 
                     input.value = ''; // Clear the line
                     output.textContent += `\n\n> ${val}`;
+                    const data = await response.json();
+output.removeChild(loading);
+output.textContent += `\n\n${data.reply}`;
+
+// NEW: Update the visual "Gate" indicator
+const statusText = document.getElementById('status-text');
+const gateLight = document.getElementById('gate-light');
+
+if (data.has_bribe) {
+    statusText.textContent = "TRUSTED";
+    statusText.style.color = "#22ff22";
+    gateLight.style.background = "#22ff22";
+    gateLight.style.boxShadow = "0 0 10px #22ff22";
+}
                     output.scrollTop = output.scrollHeight;
 
                     // Show visual feedback that system is thinking
