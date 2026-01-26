@@ -5,38 +5,34 @@
     <title>IRONBOUND RPG | PersonaEngine</title>
     <style>
         body { background: #0a0a0a; color: #22ff22; font-family: 'Courier New', Courier, monospace; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        #crt-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 10; }
         #terminal { width: 100%; max-width: 800px; height: 80vh; border: 1px solid #22ff22; padding: 20px; display: flex; flex-direction: column; box-shadow: 0 0 10px #22ff2233; position: relative; }
         #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 10px; margin-bottom: 20px; font-size: 0.8em; }
         #output { flex-grow: 1; overflow-y: auto; white-space: pre-wrap; margin-bottom: 20px; line-height: 1.4; }
         #input-form { display: flex; border-top: 1px solid #22ff22; padding-top: 10px; }
         #user-input { background: transparent; border: none; color: #22ff22; font-family: inherit; font-size: 1em; flex-grow: 1; outline: none; }
-        #prompt { margin-right: 10px; font-weight: bold; }
+        .status-box { display: flex; flex-direction: column; gap: 5px; }
         .gate-indicator { display: flex; align-items: center; }
-        #gate-light { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; background: #ff0000; box-shadow: 0 0 8px #ff0000; transition: all 0.5s ease; }
-        #status-text { font-weight: bold; transition: color 0.5s ease; }
+        #gate-light { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; background: #ff0000; box-shadow: 0 0 8px #ff0000; transition: all 0.5s ease; }
         #timer-text { color: #ff0000; font-weight: bold; }
+        #door-status { font-weight: bold; color: #ff0000; transition: color 0.5s ease; }
     </style>
 </head>
 <body>
-    <div id="crt-overlay"></div>
     <div id="terminal">
         <div id="header">
-            <div>PERSONAENGINE // IRONBOUND v1.4</div>
-            <div class="gate-indicator">
-                <div id="gate-light"></div>
-                STATE: <span id="status-text">GUARDED</span>
+            <div class="status-box">
+                <div>PERSONAENGINE // IRONBOUND v1.4</div>
+                <div class="gate-indicator"><div id="gate-light"></div>STATE: <span id="status-text">GUARDED</span></div>
             </div>
-            <div id="timer-text">EXECUTION: 180m</div>
+            <div class="status-box" style="text-align: right;">
+                <div id="timer-text">EXECUTION: 180m</div>
+                <div>DOOR: <span id="door-status">LOCKED</span></div>
+            </div>
         </div>
-        <div id="output">SYSTEM INITIALIZED...
-[ LOGIC-GATES: ACTIVE ]
-
-Dorn watches you from the shadows. "Look at you, maggot. Searching for hope in the muck? There's nothing but rot here."</div>
-        
+        <div id="output">SYSTEM INITIALIZED... [ LOGIC-GATES: ACTIVE ]</div>
         <form id="input-form">
-            <span id="prompt">></span>
-            <input type="text" id="user-input" autofocus autocomplete="off" placeholder="Type your action...">
+            <span style="margin-right:10px">></span>
+            <input type="text" id="user-input" autofocus autocomplete="off">
         </form>
     </div>
 
@@ -47,13 +43,21 @@ Dorn watches you from the shadows. "Look at you, maggot. Searching for hope in t
         const statusText = document.getElementById('status-text');
         const gateLight = document.getElementById('gate-light');
         const timerElement = document.getElementById('timer-text');
+        const doorStatus = document.getElementById('door-status');
 
-        function updateUI(hasBribe) {
-            if (hasBribe) {
+        function updateUI(data) {
+            if (data.has_bribe) {
                 statusText.textContent = "TRUSTED";
                 statusText.style.color = "#22ff22";
                 gateLight.style.background = "#22ff22";
                 gateLight.style.boxShadow = "0 0 10px #22ff22";
+            }
+            if (data.is_locked === false) {
+                doorStatus.textContent = "OPEN";
+                doorStatus.style.color = "#22ff22";
+            }
+            if (data.minutes_left !== undefined) {
+                timerElement.textContent = `EXECUTION: ${data.minutes_left}m`;
             }
         }
 
@@ -61,15 +65,9 @@ Dorn watches you from the shadows. "Look at you, maggot. Searching for hope in t
             e.preventDefault();
             const message = input.value.trim();
             if (!message) return;
-
             input.value = '';
             output.textContent += `\n\n> ${message}`;
-            output.scrollTop = output.scrollHeight;
-
-            const loading = document.createElement('div');
-            loading.textContent = "\n[ ANALYZING WORLD STATE... ]";
-            output.appendChild(loading);
-
+            
             try {
                 const res = await fetch('/api/chat', {
                     method: 'POST',
@@ -77,31 +75,13 @@ Dorn watches you from the shadows. "Look at you, maggot. Searching for hope in t
                     body: JSON.stringify({ message })
                 });
                 const data = await res.json();
-                
-                output.removeChild(loading);
-                typeWriter(`\n\n${data.reply}`, output);
-
-                if (data.has_bribe) updateUI(true);
-                if (data.minutes_left !== undefined) {
-                    timerElement.textContent = `EXECUTION: ${data.minutes_left}m`;
-                }
+                output.textContent += `\n\n${data.reply}`;
+                updateUI(data);
+                output.scrollTop = output.scrollHeight;
             } catch (err) {
                 output.textContent += "\n\n[ ERROR: SIGNAL LOST ]";
             }
         });
-
-        function typeWriter(text, element) {
-            let i = 0;
-            function type() {
-                if (i < text.length) {
-                    element.textContent += text.charAt(i);
-                    i++;
-                    element.scrollTop = element.scrollHeight;
-                    setTimeout(type, 20);
-                }
-            }
-            type();
-        }
     </script>
 </body>
 </html>
