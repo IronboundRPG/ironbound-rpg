@@ -1,149 +1,71 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>IRONBOUND RPG | PersonaEngine</title>
-    <style>
-        body { 
-            background: #000; 
-            background-image: url('cell-bg.jpg'); 
-            background-size: cover;
-            background-position: center;
-            color: #22ff22; 
-            font-family: 'Courier New', Courier, monospace; 
-            margin: 0; padding: 20px; 
-            display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; 
-        }
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const { message } = req.body;
 
-        /* MASSIVE CHARACTER LAYER */
-        #character-layer {
-            position: absolute;
-            bottom: -100px; /* Lowered slightly so he looms from below */
-            right: -5%;    /* Positioned further right */
-            width: 80%;    /* DOUBLED SIZE: from 45% to 80% */
-            height: 120vh; /* Taller than the screen for that "looming" feel */
-            background-image: url('dorn.png'); 
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: bottom right;
-            opacity: 0; 
-            filter: brightness(0.7) contrast(1.2);
-            /* This helps blend the character background into the dark scene */
-            mix-blend-mode: screen; 
-            z-index: 12; 
-            transition: opacity 1.5s ease, filter 0.5s ease, transform 1s ease;
-            pointer-events: none;
-            transform: translateY(50px); /* Small bounce-in effect when he appears */
-        }
+  try {
+    const dbHeaders = {
+      "apikey": process.env.SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json"
+    };
 
-        #crt-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 20; }
-        
-        #terminal { 
-            width: 100%; max-width: 700px; height: 85vh; 
-            background: rgba(10, 10, 10, 0.9); 
-            border: 1px solid #22ff22; padding: 20px; 
-            display: flex; flex-direction: column; 
-            box-shadow: 0 0 20px rgba(34, 255, 34, 0.2); 
-            position: relative; z-index: 15; /* Above Dorn but below the CRT glow */
-            backdrop-filter: blur(10px);
-            margin-right: 35%; /* Pushes terminal left to let Big Dorn shine */
-        }
+    // 1. FETCH WORLD STATE
+    const dbRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.Darren&select=*`, { headers: dbHeaders });
+    const dbData = await dbRes.json();
+    let state = dbData[0] || { minutes_left: 180, has_bribe_item: false, is_cell_locked: true };
+    let newTime = Math.max(0, (state.minutes_left || 180) - 1);
 
-        #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 10px; margin-bottom: 20px; font-size: 0.8em; }
-        #output { flex-grow: 1; overflow-y: auto; white-space: pre-wrap; margin-bottom: 20px; line-height: 1.4; text-shadow: 0 0 5px #22ff22; }
-        #input-form { display: flex; border-top: 1px solid #22ff22; padding-top: 10px; }
-        #user-input { background: transparent; border: none; color: #22ff22; font-family: inherit; font-size: 1em; flex-grow: 1; outline: none; }
-        
-        #timer-text { color: #ff0000; font-weight: bold; }
-        #door-status { font-weight: bold; color: #ff0000; }
-    </style>
-</head>
-<body>
-    <audio id="bg-music" loop>
-        <source src="creepy-ambient.mp3" type="audio/mpeg">
-    </audio>
+    // 2. GENERATE DORN'S RESPONSE
+    const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "openai/gpt-4o-mini",
+        messages: [{ 
+          role: "system", 
+          content: `You are Dorn the Jailor. Cockney, abusive, predatory. [cite: 17] 
+          WORLD: Bribe=${state.has_bribe_item}, Door=${state.is_cell_locked ? 'LOCKED' : 'OPEN'}. [cite: 24, 25]
+          LOGIC: If they give ring, end with TRIGGER_CELL_OPEN. 
+          VOICE: Short sentences. Use contractions. [cite: 20] Signature: "It's more than my job's worth". [cite: 19]`
+        }, { role: "user", content: message }]
+      })
+    });
 
-    <div id="character-layer"></div>
-    <div id="crt-overlay"></div>
+    const aiData = await aiResponse.json();
+    let reply = aiData.choices[0]?.message?.content || "Dorn grunts...";
+    let updates = { minutes_left: newTime };
 
-    <div id="terminal">
-        <div id="header">
-            <div class="status-box">
-                <div>PERSONAENGINE // IRONBOUND v1.5</div>
-                <div>STATE: <span id="status-text" style="color:#ff0000">GUARDED</span></div>
-            </div>
-            <div class="status-box" style="text-align: right;">
-                <div id="timer-text">EXECUTION: 180m</div>
-                <div>DOOR: <span id="door-status">LOCKED</span></div>
-            </div>
-        </div>
-        <div id="output">SYSTEM INITIALIZED... [ VISUALS ACTIVE ]</div>
-        <form id="input-form">
-            <span style="margin-right:10px">></span>
-            <input type="text" id="user-input" autofocus autocomplete="off" placeholder="Speak to the Jailor...">
-        </form>
-    </div>
+    if (reply.includes('TRIGGER_CELL_OPEN')) {
+        updates.is_cell_locked = false;
+        reply = reply.replace('TRIGGER_CELL_OPEN', '').trim();
+    }
 
-    <script>
-        const form = document.getElementById('input-form');
-        const input = document.getElementById('user-input');
-        const output = document.getElementById('output');
-        const statusText = document.getElementById('status-text');
-        const timerElement = document.getElementById('timer-text');
-        const doorStatus = document.getElementById('door-status');
-        const bgMusic = document.getElementById('bg-music');
-        const charLayer = document.getElementById('character-layer');
+    // 3. GENERATE THE VOICE (ElevenLabs)
+    // Replace 'YOUR_VOICE_ID' with a gravelly British ID from ElevenLabs
+    const voiceRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpg8nEByWQX2l`, {
+      method: "POST",
+      headers: { "xi-api-key": process.env.ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: reply,
+        model_id: "eleven_monolingual_v1",
+        voice_settings: { stability: 0.4, similarity_boost: 0.8 }
+      })
+    });
 
-        function updateUI(data) {
-            if (data.has_bribe) {
-                statusText.textContent = "TRUSTED";
-                statusText.style.color = "#22ff22";
-            }
-            if (data.is_locked === false) {
-                doorStatus.textContent = "OPEN";
-                doorStatus.style.color = "#22ff22";
-            }
-            if (data.minutes_left !== undefined) {
-                timerElement.textContent = `EXECUTION: ${data.minutes_left}m`;
-            }
-        }
+    const audioBuffer = await voiceRes.arrayBuffer();
+    const audioBase64 = Buffer.from(audioBuffer).toString('base64');
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (bgMusic.paused) {
-                bgMusic.play().catch(() => {});
-                bgMusic.volume = 0.15;
-            }
+    // 4. UPDATE DB
+    await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.Darren`, {
+      method: "PATCH", headers: dbHeaders, body: JSON.stringify(updates)
+    });
 
-            const message = input.value.trim();
-            if (!message) return;
-            input.value = '';
-            output.textContent += `\n\n> ${message}`;
-            
-            // Appearance Logic
-            charLayer.style.opacity = "1";
-            charLayer.style.transform = "translateY(0)";
+    res.status(200).json({ 
+        reply, 
+        audio: audioBase64, // Send the voice data to the UI
+        is_locked: updates.is_cell_locked !== undefined ? updates.is_cell_locked : state.is_cell_locked,
+        minutes_left: newTime
+    });
 
-            try {
-                const res = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
-                });
-                const data = await res.json();
-                
-                // Visual Pulse when speaking
-                charLayer.style.filter = "brightness(1.1) contrast(1.3)";
-                setTimeout(() => { charLayer.style.filter = "brightness(0.7) contrast(1.1)"; }, 400);
-
-                output.textContent += `\n\n${data.reply}`;
-                updateUI(data);
-                output.scrollTop = output.scrollHeight;
-            } catch (err) {
-                output.textContent += "\n\n[ ERROR: SIGNAL LOST ]";
-            }
-        });
-    </script>
-</body>
-</html>
+  } catch (err) { res.status(200).json({ reply: "[DORN_SILENCED]" }); }
+}
