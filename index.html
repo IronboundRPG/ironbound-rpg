@@ -5,10 +5,9 @@
     <title>IRONBOUND RPG | PersonaEngine</title>
     <style>
         body { background: #000; background-image: url('cell-bg.jpg'); background-size: cover; background-position: center; color: #22ff22; font-family: 'Courier New', Courier, monospace; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        #character-layer { position: absolute; bottom: -100px; right: -5%; width: 80%; height: 120vh; background-image: url('dorn.png'); background-size: contain; background-repeat: no-repeat; background-position: bottom right; opacity: 1; filter: brightness(0.7) contrast(1.2); mix-blend-mode: screen; z-index: 12; transition: filter 0.5s ease; pointer-events: none; }
-        #crt-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 20; }
+        #character-layer { position: absolute; bottom: -100px; right: -5%; width: 80%; height: 120vh; background-image: url('dorn.png'); background-size: contain; background-repeat: no-repeat; background-position: bottom right; opacity: 1; filter: brightness(0.7) contrast(1.2); mix-blend-mode: screen; z-index: 12; pointer-events: none; }
         #terminal { width: 100%; max-width: 700px; height: 85vh; background: rgba(10, 10, 10, 0.9); border: 1px solid #22ff22; padding: 20px; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(34, 255, 34, 0.2); position: relative; z-index: 15; backdrop-filter: blur(10px); margin-right: 35%; }
-        #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 10px; margin-bottom: 20px; font-size: 0.8em; }
+        #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 10px; margin-bottom: 20px; font-size: 0.7em; }
         #output { flex-grow: 1; overflow-y: auto; white-space: pre-wrap; margin-bottom: 20px; line-height: 1.4; text-shadow: 0 0 5px #22ff22; }
         #input-form { display: flex; border-top: 1px solid #22ff22; padding-top: 10px; }
         #user-input { background: transparent; border: none; color: #22ff22; font-family: inherit; font-size: 1em; flex-grow: 1; outline: none; }
@@ -17,16 +16,15 @@
 <body>
     <audio id="bg-music" loop><source src="creepy-ambient.mp3" type="audio/mpeg"></audio>
     <div id="character-layer"></div>
-    <div id="crt-overlay"></div>
     <div id="terminal">
         <div id="header">
-            <div>PERSONAENGINE // IRONBOUND v1.6</div>
-            <div>STATE: <span id="status-text" style="color:#ff0000">GUARDED</span> | EXECUTION: <span id="timer-text">180m</span> | DOOR: <span id="door-status">LOCKED</span></div>
+            <div>PERSONAENGINE v1.6</div>
+            <div>VOICE: <span id="v-diag" style="color:orange">STANDBY</span> | EXEC: <span id="t-text">180m</span></div>
         </div>
-        <div id="output">SYSTEM INITIALIZED... [ VOCAL MODULES STANDBY ]</div>
+        <div id="output">SYSTEM READY...</div>
         <form id="input-form">
             <span style="margin-right:10px">></span>
-            <input type="text" id="user-input" autofocus autocomplete="off" placeholder="Type to speak...">
+            <input type="text" id="user-input" autofocus autocomplete="off">
         </form>
     </div>
 
@@ -35,7 +33,6 @@
         const input = document.getElementById('user-input');
         const output = document.getElementById('output');
         const bgMusic = document.getElementById('bg-music');
-        const charLayer = document.getElementById('character-layer');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -54,27 +51,20 @@
                 });
                 const data = await res.json();
                 
-                // AUDIO SAFETY NET: If audio fails, game continues
+                // Show Voice Diagnostic
+                document.getElementById('v-diag').textContent = data.voice_diag;
+                document.getElementById('v-diag').style.color = data.audio ? "#22ff22" : "red";
+
                 if (data.audio) {
-                    try {
-                        const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
-                        audio.play().catch(e => console.log("Audio playback blocked or failed."));
-                    } catch (audioErr) { console.log("Voice module bypass active."); }
+                    const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
+                    audio.play();
                 }
 
-                charLayer.style.filter = "brightness(1.1) contrast(1.3)";
-                setTimeout(() => { charLayer.style.filter = "brightness(0.7) contrast(1.1)"; }, 400);
-
                 output.textContent += `\n\n${data.reply}`;
-                
-                // Update UI Headers
-                if (data.is_locked === false) document.getElementById('door-status').textContent = "OPEN";
-                if (data.minutes_left) document.getElementById('timer-text').textContent = data.minutes_left + "m";
-                if (data.has_bribe) document.getElementById('status-text').style.color = "#22ff22";
-
+                if (data.minutes_left) document.getElementById('t-text').textContent = data.minutes_left + "m";
                 output.scrollTop = output.scrollHeight;
             } catch (err) {
-                output.textContent += "\n\n[ ERROR: CORE SIGNAL LOST. CHECK API KEYS. ]";
+                output.textContent += "\n\n[ CONNECTION ERROR ]";
             }
         });
     </script>
