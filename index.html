@@ -32,7 +32,7 @@
         <div id="output">SYSTEM INITIALIZED...
 [ LOGIC-GATES: ACTIVE ]
 
-Dorn watches you from the shadows of the corridor. "Another maggot lookin' for mercy? You'll find none here."</div>
+Dorn watches you from the shadows. "Look at you, maggot. Searching for hope in the muck? There's nothing but rot here."</div>
         
         <form id="input-form">
             <span id="prompt">></span>
@@ -48,4 +48,60 @@ Dorn watches you from the shadows of the corridor. "Another maggot lookin' for m
         const gateLight = document.getElementById('gate-light');
         const timerElement = document.getElementById('timer-text');
 
-        // Handles the visual
+        function updateUI(hasBribe) {
+            if (hasBribe) {
+                statusText.textContent = "TRUSTED";
+                statusText.style.color = "#22ff22";
+                gateLight.style.background = "#22ff22";
+                gateLight.style.boxShadow = "0 0 10px #22ff22";
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = input.value.trim();
+            if (!message) return;
+
+            input.value = '';
+            output.textContent += `\n\n> ${message}`;
+            output.scrollTop = output.scrollHeight;
+
+            const loading = document.createElement('div');
+            loading.textContent = "\n[ ANALYZING WORLD STATE... ]";
+            output.appendChild(loading);
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                const data = await res.json();
+                
+                output.removeChild(loading);
+                typeWriter(`\n\n${data.reply}`, output);
+
+                if (data.has_bribe) updateUI(true);
+                if (data.minutes_left !== undefined) {
+                    timerElement.textContent = `EXECUTION: ${data.minutes_left}m`;
+                }
+            } catch (err) {
+                output.textContent += "\n\n[ ERROR: SIGNAL LOST ]";
+            }
+        });
+
+        function typeWriter(text, element) {
+            let i = 0;
+            function type() {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    element.scrollTop = element.scrollHeight;
+                    setTimeout(type, 20);
+                }
+            }
+            type();
+        }
+    </script>
+</body>
+</html>
