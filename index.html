@@ -5,8 +5,21 @@
     <title>IRONBOUND RPG | PersonaEngine</title>
     <style>
         body { background: #000; background-image: url('cell-bg.jpg'); background-size: cover; background-position: center; color: #22ff22; font-family: 'Courier New', Courier, monospace; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        #character-layer { position: absolute; bottom: -100px; right: -5%; width: 85%; height: 120vh; background-image: url('dorn.png'); background-size: contain; background-repeat: no-repeat; background-position: bottom right; opacity: 1; filter: brightness(0.7) contrast(1.2); mix-blend-mode: screen; z-index: 5; pointer-events: none; }
-        #crt-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 20; }
+        
+        #character-layer { 
+            position: absolute; bottom: -100px; right: -5%; width: 85%; height: 120vh; 
+            background-image: url('dorn.png'); background-size: contain; background-repeat: no-repeat; background-position: bottom right; 
+            opacity: 1; 
+            filter: brightness(0.4) grayscale(50%); /* Start dark and muted */
+            mix-blend-mode: screen; z-index: 5; pointer-events: none; 
+            transition: filter 0.3s ease; /* Snappy transition for speaking */
+        }
+
+        /* The "Speaking" class we will trigger with JS */
+        #character-layer.speaking {
+            filter: brightness(1.1) grayscale(0%);
+        }
+
         #terminal { width: 100%; max-width: 650px; height: 85vh; background: rgba(10, 10, 10, 0.9); border: 1px solid #22ff22; padding: 25px; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(34, 255, 34, 0.2); position: relative; z-index: 10; backdrop-filter: blur(12px); margin-right: 40%; }
         #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 10px; margin-bottom: 20px; font-size: 0.7em; }
         #output { flex-grow: 1; overflow-y: auto; white-space: pre-wrap; margin-bottom: 20px; line-height: 1.5; text-shadow: 0 0 5px #22ff22; scrollbar-width: none; }
@@ -16,11 +29,10 @@
 </head>
 <body>
     <audio id="bg-music" loop><source src="creepy-ambient.mp3" type="audio/mpeg"></audio>
-    <div id="character-layer"></div>
-    <div id="crt-overlay"></div>
+    <div id="character-layer" id="dorn-portrait"></div>
     <div id="terminal">
         <div id="header">
-            <div>PERSONAENGINE v1.6</div>
+            <div>PERSONAENGINE v1.7</div>
             <div>VOICE: <span id="v-diag" style="color:orange">READY</span> | EXEC: <span id="t-text">180m</span></div>
         </div>
         <div id="output">SYSTEM READY...</div>
@@ -35,6 +47,7 @@
         const input = document.getElementById('user-input');
         const output = document.getElementById('output');
         const bgMusic = document.getElementById('bg-music');
+        const charLayer = document.getElementById('character-layer');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -53,12 +66,17 @@
                 });
                 const data = await res.json();
                 
-                const diag = document.getElementById('v-diag');
-                diag.textContent = data.voice_diag;
-                diag.style.color = (data.voice_diag === "SUCCESS") ? "#22ff22" : "red";
+                document.getElementById('v-diag').textContent = data.voice_diag;
 
                 if (data.audio) {
                     const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
+                    
+                    // LIGHT UP DORN WHEN AUDIO STARTS
+                    audio.onplay = () => { charLayer.classList.add('speaking'); };
+                    
+                    // FADE DORN WHEN AUDIO ENDS
+                    audio.onended = () => { charLayer.classList.remove('speaking'); };
+                    
                     audio.play();
                 }
 
