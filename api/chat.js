@@ -12,10 +12,12 @@ export default async function handler(req, res) {
     // 1. FETCH WORLD STATE
     const dbRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.Darren&select=*`, { headers: dbHeaders });
     const dbData = await dbRes.json();
-    let state = dbData[0] || { minutes_left: 180, has_bribe_item: false };
-    let newTime = Math.max(0, (state.minutes_left || 180) - 10);
+    let state = dbData[0] || { minutes_left: 180, has_bribe_item: false, is_cell_locked: true };
+    
+    // UPDATED LOGIC: Only 1 minute per turn now
+    let newTime = Math.max(0, (state.minutes_left || 180) - 1);
 
-    // 2. THE DORN SPECIFICATION (Refined for Player Agency)
+    // 2. THE DORN SPECIFICATION
     const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
@@ -26,18 +28,17 @@ export default async function handler(req, res) {
             role: "system", 
             content: `You are Dorn the Jailor. Cockney, abusive, predatory. 
             
-            SCENARIO: The player is in a cell. There is a Signet Ring hidden in the straw.
+            WORLD DATA:
+            - Player has Signet Ring: ${state.has_bribe_item ? 'YES' : 'NO'}.
+            - Cell Door is: ${state.is_cell_locked ? 'LOCKED' : 'OPEN'}.
+            - Time until dawn: ${newTime}m. (Time moves slow, only 1m passes per turn).
+
+            RULES:
+            1. If player searches straw and has no ring: They find 'Signet Ring'. Trigger: TRIGGER_BRIBE_FOUND.
+            2. If player OFFERS the ring: Dorn takes it and UNLOCKS the door. Trigger: TRIGGER_CELL_OPEN.
             
-            GAME LOGIC:
-            1. If the player searches the straw and possesses_ring is NO: Describe THE PLAYER finding the 'Signet Ring'. Dorn watches them find it and reacts with sudden greed/curiosity. End reply with 'TRIGGER_BRIBE_FOUND'.
-            2. If player HAS the ring (possesses_ring: YES): Dorn knows they have it. He is calmer but stays 'Dorn'. He wants that ring to buy his way into a promotion.
-            
-            CONSTRAINTS: 
-            - Use contractions. Short, choppy sentences. 
-            - Dorn NEVER finds the ring himself. The player finds it.
-            - SIGNATURES: "It's more than my job's worth", "Shut up, maggot!".
-            
-            DATA: Player has ring: ${state.has_bribe_item ? 'YES' : 'NO'}. Time: ${newTime}m.`
+            VOICE: Abusive but corruptible. Use contractions. Short sentences. 
+            SIGNATURES: "It's more than my job's worth", "Shut up, maggot!".`
           },
           { role: "user", content: message }
         ]
@@ -45,28 +46,35 @@ export default async function handler(req, res) {
     });
 
     const aiData = await aiResponse.json();
-    let reply = aiData.choices[0]?.message?.content || "Dorn just sneers at you.";
-    let bribeFound = reply.includes('TRIGGER_BRIBE_FOUND');
+    let reply = aiData.choices[0]?.message?.content || "Dorn grunts...";
+    let updates = { minutes_left: newTime };
 
-    // 3. DATABASE UPDATE
-    const updates = { 
-        minutes_left: newTime, 
-        has_bribe_item: state.has_bribe_item || bribeFound 
-    };
+    // Process Narrative Triggers
+    if (reply.includes('TRIGGER_BRIBE_FOUND')) {
+        updates.has_bribe_item = true;
+        reply = reply.replace('TRIGGER_BRIBE_FOUND', '').trim();
+    }
+    if (reply.includes('TRIGGER_CELL_OPEN')) {
+        updates.is_cell_locked = false;
+        reply = reply.replace('TRIGGER_CELL_OPEN', '').trim();
+    }
 
+    // 3. UPDATE DATABASE (Supabase)
     await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.Darren`, {
       method: "PATCH",
       headers: dbHeaders,
       body: JSON.stringify(updates)
     });
 
+    // Return everything to UI
     res.status(200).json({ 
-        reply: reply.replace('TRIGGER_BRIBE_FOUND', '').trim(), 
-        has_bribe: updates.has_bribe_item,
+        reply, 
+        has_bribe: state.has_bribe_item || updates.has_bribe_item,
+        is_locked: updates.is_cell_locked !== undefined ? updates.is_cell_locked : state.is_cell_locked,
         minutes_left: newTime
     });
 
   } catch (err) {
-    res.status(200).json({ reply: "[DORN GRUNTS: CONNECTION LOST]" });
+    res.status(200).json({ reply: "[DORN_OFFLINE: Connection Lost]" });
   }
 }
