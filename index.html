@@ -56,7 +56,7 @@
     </style>
 </head>
 <body>
-    <audio id="bg-music" loop preload="auto">
+    <audio id="bg-music" loop>
         <source src="creepy-ambient.mp3" type="audio/mpeg">
     </audio>
 
@@ -92,13 +92,4 @@
         const charLayer = document.getElementById('character-layer');
 
         function updateUI(data) {
-            if (data.has_bribe) {
-                statusText.textContent = "TRUSTED";
-                statusText.style.color = "#22ff22";
-            }
-            if (data.is_locked === false) {
-                doorStatus.textContent = "OPEN";
-                doorStatus.style.color = "#22ff22";
-            }
-            if (data.minutes_left !== undefined) {
-                timerElement.textContent = `EXECUTION: ${data.minutes_left}
+            if (data.
