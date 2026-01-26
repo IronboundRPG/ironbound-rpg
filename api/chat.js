@@ -13,11 +13,9 @@ export default async function handler(req, res) {
     const dbRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.Darren&select=*`, { headers: dbHeaders });
     const dbData = await dbRes.json();
     let state = dbData[0] || { minutes_left: 180, has_bribe_item: false, is_cell_locked: true };
-    
-    // UPDATED LOGIC: Only 1 minute per turn now
     let newTime = Math.max(0, (state.minutes_left || 180) - 1);
 
-    // 2. THE DORN SPECIFICATION
+    // 2. THE DORN SPECIFICATION (Hardened Bribery Logic)
     const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
@@ -31,14 +29,14 @@ export default async function handler(req, res) {
             WORLD DATA:
             - Player has Signet Ring: ${state.has_bribe_item ? 'YES' : 'NO'}.
             - Cell Door is: ${state.is_cell_locked ? 'LOCKED' : 'OPEN'}.
-            - Time until dawn: ${newTime}m. (Time moves slow, only 1m passes per turn).
+            - Time until dawn: ${newTime}m.
 
-            RULES:
-            1. If player searches straw and has no ring: They find 'Signet Ring'. Trigger: TRIGGER_BRIBE_FOUND.
-            2. If player OFFERS the ring: Dorn takes it and UNLOCKS the door. Trigger: TRIGGER_CELL_OPEN.
+            MANDATORY GAME LOGIC:
+            1. If player searches straw AND has no ring: Describe them finding it. Add 'TRIGGER_BRIBE_FOUND'.
+            2. If player EXPLICITLY GIVES/HANDS OVER the ring: Dorn's greed wins. He takes it to fund his promotion. He MUST unlock the door now. Add 'TRIGGER_CELL_OPEN'.
             
-            VOICE: Abusive but corruptible. Use contractions. Short sentences. 
-            SIGNATURES: "It's more than my job's worth", "Shut up, maggot!".`
+            VOICE: Stay in character. Use 'maggot' and 'git'. Be grumpy about the risk.
+            SIGNATURE: "It is more than my job is worth, but..."`
           },
           { role: "user", content: message }
         ]
@@ -46,10 +44,10 @@ export default async function handler(req, res) {
     });
 
     const aiData = await aiResponse.json();
-    let reply = aiData.choices[0]?.message?.content || "Dorn grunts...";
+    let reply = aiData.choices[0]?.message?.content || "Dorn just stares at you...";
     let updates = { minutes_left: newTime };
 
-    // Process Narrative Triggers
+    // Process Triggers
     if (reply.includes('TRIGGER_BRIBE_FOUND')) {
         updates.has_bribe_item = true;
         reply = reply.replace('TRIGGER_BRIBE_FOUND', '').trim();
@@ -59,14 +57,13 @@ export default async function handler(req, res) {
         reply = reply.replace('TRIGGER_CELL_OPEN', '').trim();
     }
 
-    // 3. UPDATE DATABASE (Supabase)
+    // 3. UPDATE DATABASE
     await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.Darren`, {
       method: "PATCH",
       headers: dbHeaders,
       body: JSON.stringify(updates)
     });
 
-    // Return everything to UI
     res.status(200).json({ 
         reply, 
         has_bribe: state.has_bribe_item || updates.has_bribe_item,
