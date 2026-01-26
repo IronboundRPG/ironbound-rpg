@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     });
 
     const aiData = await aiResponse.json();
-    let reply = aiData.choices[0]?.message?.content || "Dorn grunts...";
+    let reply = aiData.choices[0]?.message?.content || "Dorn just sneers.";
     let updates = { minutes_left: newTime };
 
     if (reply.includes('TRIGGER_CELL_OPEN')) {
@@ -40,29 +40,37 @@ export default async function handler(req, res) {
         reply = reply.replace('TRIGGER_CELL_OPEN', '').trim();
     }
 
-    // 3. SAFE-MODE VOICE (Only runs if Key is present)
+    // 3. GENERATE VOICE (ElevenLabs)
     let audioBase64 = null;
     if (process.env.ELEVENLABS_API_KEY) {
       try {
         const voiceRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/1TE7ou3jyxHsyRehUuMB`, {
           method: "POST",
-          headers: { "xi-api-key": process.env.ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+          headers: { 
+            "xi-api-key": process.env.ELEVENLABS_API_KEY, 
+            "Content-Type": "application/json" 
+          },
           body: JSON.stringify({
             text: reply,
             model_id: "eleven_monolingual_v1",
             voice_settings: { stability: 0.5, similarity_boost: 0.75 }
           })
         });
-        const audioBuffer = await voiceRes.arrayBuffer();
-        audioBase64 = Buffer.from(audioBuffer).toString('base64');
+
+        if (voiceRes.ok) {
+          const audioBuffer = await voiceRes.arrayBuffer();
+          audioBase64 = Buffer.from(audioBuffer).toString('base64');
+        }
       } catch (voiceErr) {
-        console.error("Voice failed, skipping audio.");
+        console.error("Voice Generation Failed:", voiceErr);
       }
     }
 
     // 4. UPDATE DATABASE
     await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.Darren`, {
-      method: "PATCH", headers: dbHeaders, body: JSON.stringify(updates)
+      method: "PATCH",
+      headers: dbHeaders,
+      body: JSON.stringify(updates)
     });
 
     res.status(200).json({ 
