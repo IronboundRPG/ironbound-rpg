@@ -15,6 +15,7 @@
         .gate-indicator { display: flex; align-items: center; }
         #gate-light { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; background: #ff0000; box-shadow: 0 0 8px #ff0000; transition: all 0.5s ease; }
         #status-text { font-weight: bold; transition: color 0.5s ease; }
+        #timer-text { color: #ff0000; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -26,12 +27,12 @@
                 <div id="gate-light"></div>
                 STATE: <span id="status-text">GUARDED</span>
             </div>
-            <div>EXECUTION: 180m</div>
+            <div id="timer-text">EXECUTION: 180m</div>
         </div>
         <div id="output">SYSTEM INITIALIZED...
 [ LOGIC-GATES: ACTIVE ]
 
-The Jailor watches you from his desk. "Searching for hope in the straw, prisoner? There is only rot here."</div>
+Dorn watches you from the shadows of the corridor. "Another maggot lookin' for mercy? You'll find none here."</div>
         
         <form id="input-form">
             <span id="prompt">></span>
@@ -45,64 +46,6 @@ The Jailor watches you from his desk. "Searching for hope in the straw, prisoner
         const output = document.getElementById('output');
         const statusText = document.getElementById('status-text');
         const gateLight = document.getElementById('gate-light');
+        const timerElement = document.getElementById('timer-text');
 
-        function updateUI(hasBribe) {
-            if (hasBribe) {
-                statusText.textContent = "TRUSTED";
-                statusText.style.color = "#22ff22";
-                gateLight.style.background = "#22ff22";
-                gateLight.style.boxShadow = "0 0 10px #22ff22";
-            }
-        }
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const message = input.value.trim();
-            if (!message) return;
-
-            input.value = '';
-            output.textContent += `\n\n> ${message}`;
-            output.scrollTop = output.scrollHeight;
-
-            const loading = document.createElement('div');
-            loading.textContent = "\n[ ANALYZING WORLD STATE... ]";
-            output.appendChild(loading);
-
-            try {
-                const res = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
-                });
-                const data = await res.json();
-                
-                output.removeChild(loading);
-                
-                // The Typewriter Effect
-                typeWriter(`\n\n${data.reply}`, output);
-
-                // UPDATE UI BASED ON DB SIGNAL
-                if (data.has_bribe) {
-                    updateUI(true);
-                }
-
-            } catch (err) {
-                output.textContent += "\n\n[ ERROR: SIGNAL LOST ]";
-            }
-        });
-
-        function typeWriter(text, element) {
-            let i = 0;
-            function type() {
-                if (i < text.length) {
-                    element.textContent += text.charAt(i);
-                    i++;
-                    element.scrollTop = element.scrollHeight;
-                    setTimeout(type, 20);
-                }
-            }
-            type();
-        }
-    </script>
-</body>
-</html>
+        // Handles the visual
