@@ -19,47 +19,43 @@ export default async function handler(req, res) {
       headers: { "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "openai/gpt-4o-mini",
-        messages: [{ role: "system", content: "You are Dorn the Jailor. Cockney, abusive." }, { role: "user", content: message }]
+        messages: [{ role: "system", content: "You are Dorn. Cockney jailor." }, { role: "user", content: message }]
       })
     });
 
     const aiData = await aiResponse.json();
     let reply = aiData.choices[0]?.message?.content || "Dorn snorts.";
     
+    // THE KEY TEST
+    // Try the Env Var first, then fallback to a placeholder string for testing
+    const elKey = process.env.ELEVENLABS_API_KEY || "sk_e1f5939a2dd204759eca707e81daa5d3a088cd12b76ec34a";
+    
     let audioBase64 = null;
-    let voiceDiag = "KEY_NOT_FOUND";
+    let voiceDiag = "STARTING";
 
-    if (process.env.ELEVENLABS_API_KEY) {
-      // DIAGNOSTIC LOG (Check this in Vercel Logs)
-      const key = process.env.ELEVENLABS_API_KEY;
-      console.log(`Diagnostic: Key starts with ${key.substring(0,3)} and ends with ${key.substring(key.length - 3)}`);
-      
-      try {
-        const voiceRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/1TE7ou3jyxHsyRehUuMB`, {
-          method: "POST",
-          headers: { "xi-api-key": key, "Content-Type": "application/json" },
-          body: JSON.stringify({ text: reply, model_id: "eleven_monolingual_v1" })
-        });
+    try {
+      const voiceRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/1TE7ou3jyxHsyRehUuMB`, {
+        method: "POST",
+        headers: { "xi-api-key": elKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ text: reply, model_id: "eleven_monolingual_v1" })
+      });
 
-        if (voiceRes.ok) {
-          const audioBuffer = await voiceRes.arrayBuffer();
-          audioBase64 = Buffer.from(audioBuffer).toString('base64');
-          voiceDiag = "SUCCESS";
-        } else {
-          voiceDiag = `ELEVENLABS_ERROR_${voiceRes.status}`;
-          const errData = await voiceRes.json();
-          console.error("ElevenLabs Detailed Error:", errData);
-        }
-      } catch (e) { voiceDiag = "FETCH_FAILED"; }
+      if (voiceRes.ok) {
+        const audioBuffer = await voiceRes.arrayBuffer();
+        audioBase64 = Buffer.from(audioBuffer).toString('base64');
+        voiceDiag = "SUCCESS";
+      } else {
+        const errorDetail = await voiceRes.json();
+        // This sends the EXACT ElevenLabs error message to your game UI
+        voiceDiag = `ERR_${voiceRes.status}: ${errorDetail.detail?.status || 'Unauthorized'}`;
+      }
+    } catch (e) {
+      voiceDiag = "FETCH_CRASHED";
     }
-
-    await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.Darren`, {
-      method: "PATCH", headers: dbHeaders, body: JSON.stringify({ minutes_left: newTime })
-    });
 
     res.status(200).json({ reply, audio: audioBase64, voice_diag: voiceDiag, minutes_left: newTime });
 
   } catch (err) {
-    res.status(200).json({ reply: `[DORN_ERR: ${err.message}]` });
+    res.status(200).json({ reply: `[SYSTEM_CRASH: ${err.message}]` });
   }
 }
