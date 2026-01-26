@@ -9,13 +9,11 @@ export default async function handler(req, res) {
       "Content-Type": "application/json"
     };
 
-    // 1. FETCH WORLD STATE
     const dbRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.Darren&select=*`, { headers: dbHeaders });
     const dbData = await dbRes.json();
     let state = dbData[0] || { minutes_left: 180, has_bribe_item: false, is_cell_locked: true };
     let newTime = Math.max(0, (state.minutes_left || 180) - 1);
 
-    // 2. THE DORN SPECIFICATION (Hardened Bribery Logic)
     const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
@@ -25,18 +23,17 @@ export default async function handler(req, res) {
           { 
             role: "system", 
             content: `You are Dorn the Jailor. Cockney, abusive, predatory. 
-            
             WORLD DATA:
-            - Player has Signet Ring: ${state.has_bribe_item ? 'YES' : 'NO'}.
+            - Player has Bribe Item: ${state.has_bribe_item ? 'YES' : 'NO'}.
             - Cell Door is: ${state.is_cell_locked ? 'LOCKED' : 'OPEN'}.
-            - Time until dawn: ${newTime}m.
+            - Execution in: ${newTime}m.
 
-            MANDATORY GAME LOGIC:
-            1. If player searches straw AND has no ring: Describe them finding it. Add 'TRIGGER_BRIBE_FOUND'.
-            2. If player EXPLICITLY GIVES/HANDS OVER the ring: Dorn's greed wins. He takes it to fund his promotion. He MUST unlock the door now. Add 'TRIGGER_CELL_OPEN'.
+            MANDATORY LOGIC:
+            1. If player searches straw AND has_bribe is NO: They find 'Gold'. End with 'TRIGGER_BRIBE_FOUND'.
+            2. If player HANDS OVER the gold/bribe: Dorn takes it. He MUST unlock the door now. End with 'TRIGGER_CELL_OPEN'.
+            3. If Door is OPEN and player tries to leave: Describe them escaping into the shadows.
             
-            VOICE: Stay in character. Use 'maggot' and 'git'. Be grumpy about the risk.
-            SIGNATURE: "It is more than my job is worth, but..."`
+            VOICE: Abusive but corruptible. Use "maggot". Signature: "It's more than my job's worth".`
           },
           { role: "user", content: message }
         ]
@@ -44,10 +41,9 @@ export default async function handler(req, res) {
     });
 
     const aiData = await aiResponse.json();
-    let reply = aiData.choices[0]?.message?.content || "Dorn just stares at you...";
+    let reply = aiData.choices[0]?.message?.content || "Dorn grunts...";
     let updates = { minutes_left: newTime };
 
-    // Process Triggers
     if (reply.includes('TRIGGER_BRIBE_FOUND')) {
         updates.has_bribe_item = true;
         reply = reply.replace('TRIGGER_BRIBE_FOUND', '').trim();
@@ -57,7 +53,6 @@ export default async function handler(req, res) {
         reply = reply.replace('TRIGGER_CELL_OPEN', '').trim();
     }
 
-    // 3. UPDATE DATABASE
     await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.Darren`, {
       method: "PATCH",
       headers: dbHeaders,
@@ -71,7 +66,5 @@ export default async function handler(req, res) {
         minutes_left: newTime
     });
 
-  } catch (err) {
-    res.status(200).json({ reply: "[DORN_OFFLINE: Connection Lost]" });
-  }
+  } catch (err) { res.status(200).json({ reply: "[DORN_OFFLINE]" }); }
 }
