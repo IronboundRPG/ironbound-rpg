@@ -19,28 +19,26 @@ export default async function handler(req, res) {
       headers: { "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "openai/gpt-4o-mini",
-        messages: [{ role: "system", content: `You are Dorn the Jailor. Cockney, abusive. Use short, punchy sentences.` }, { role: "user", content: message }]
+        messages: [{ role: "system", content: "You are Dorn the Jailor. Cockney, abusive." }, { role: "user", content: message }]
       })
     });
 
     const aiData = await aiResponse.json();
     let reply = aiData.choices[0]?.message?.content || "Dorn snorts.";
     
-    // VOICE LOGIC + DIAGNOSTICS
     let audioBase64 = null;
-    let voiceDiag = "KEY_NOT_FOUND_IN_VERCEL";
+    let voiceDiag = "KEY_NOT_FOUND";
 
     if (process.env.ELEVENLABS_API_KEY) {
-      voiceDiag = "ATTEMPTING_CONNECTION";
+      // DIAGNOSTIC LOG (Check this in Vercel Logs)
+      const key = process.env.ELEVENLABS_API_KEY;
+      console.log(`Diagnostic: Key starts with ${key.substring(0,3)} and ends with ${key.substring(key.length - 3)}`);
+      
       try {
         const voiceRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/1TE7ou3jyxHsyRehUuMB`, {
           method: "POST",
-          headers: { "xi-api-key": process.env.ELEVENLABS_API_KEY, "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            text: reply, 
-            model_id: "eleven_monolingual_v1",
-            voice_settings: { stability: 0.5, similarity_boost: 0.75 } 
-          })
+          headers: { "xi-api-key": key, "Content-Type": "application/json" },
+          body: JSON.stringify({ text: reply, model_id: "eleven_monolingual_v1" })
         });
 
         if (voiceRes.ok) {
@@ -49,8 +47,10 @@ export default async function handler(req, res) {
           voiceDiag = "SUCCESS";
         } else {
           voiceDiag = `ELEVENLABS_ERROR_${voiceRes.status}`;
+          const errData = await voiceRes.json();
+          console.error("ElevenLabs Detailed Error:", errData);
         }
-      } catch (e) { voiceDiag = "CONNECTION_FAILED"; }
+      } catch (e) { voiceDiag = "FETCH_FAILED"; }
     }
 
     await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.Darren`, {
@@ -60,6 +60,6 @@ export default async function handler(req, res) {
     res.status(200).json({ reply, audio: audioBase64, voice_diag: voiceDiag, minutes_left: newTime });
 
   } catch (err) {
-    res.status(200).json({ reply: `[CORE_ERROR: ${err.message}]` });
+    res.status(200).json({ reply: `[DORN_ERR: ${err.message}]` });
   }
 }
