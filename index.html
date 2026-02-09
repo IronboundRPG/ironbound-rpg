@@ -3,22 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <title>IRONBOUND RPG | PersonaEngine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pirata+One&display=swap" rel="stylesheet">
     <style>
-        body { background: #000; background-image: url('cell-bg.jpg'); background-size: cover; background-position: center; color: #22ff22; font-family: 'Courier New', Courier, monospace; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        
-        #character-layer { 
-            position: absolute; bottom: -100px; right: -5%; width: 85%; height: 120vh; 
-            background-image: url('dorn.png'); background-size: contain; background-repeat: no-repeat; background-position: bottom right; 
-            opacity: 1; 
-            filter: brightness(0.4) grayscale(50%); /* Start dark and muted */
-            mix-blend-mode: screen; z-index: 5; pointer-events: none; 
-            transition: filter 0.3s ease; /* Snappy transition for speaking */
+        body { background: #000; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; color: #22ff22; height: 100vh; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+
+        /* THE INTRO SCREEN */
+        #intro-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: black url('cell-bg.jpg') no-repeat center center;
+            background-size: cover;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            transition: opacity 2s ease, visibility 2s;
         }
 
-        /* The "Speaking" class we will trigger with JS */
-        #character-layer.speaking {
-            filter: brightness(1.1) grayscale(0%);
+        #intro-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); /* Darkens the town image */
+            z-index: -1;
         }
+
+        #intro-content {
+            max-width: 700px;
+            padding: 40px;
+            color: #cc0000; /* Blood Red */
+            font-family: 'Pirata One', system-ui;
+            font-size: 1.8em;
+            line-height: 1.4;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        #start-btn {
+            margin-top: 30px;
+            background: transparent;
+            border: 1px solid #cc0000;
+            color: #cc0000;
+            padding: 10px 30px;
+            font-family: 'Pirata One', serif;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #start-btn:hover { background: #cc0000; color: black; box-shadow: 0 0 15px #cc0000; }
+
+        /* THE GAME UI (Stays the same but hidden behind intro) */
+        #character-layer { 
+            position: absolute; bottom: -100px; right: -5%; width: 85%; height: 120vh; 
+            background: url('dorn.jpg') no-repeat bottom right; background-size: contain; 
+            opacity: 1; filter: brightness(0.4) grayscale(50%); mix-blend-mode: screen; z-index: 5; pointer-events: none; 
+            transition: filter 0.3s ease; 
+        }
+        #character-layer.speaking { filter: brightness(1.1) grayscale(0%); }
 
         #terminal { width: 100%; max-width: 650px; height: 85vh; background: rgba(10, 10, 10, 0.9); border: 1px solid #22ff22; padding: 25px; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(34, 255, 34, 0.2); position: relative; z-index: 10; backdrop-filter: blur(12px); margin-right: 40%; }
         #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 10px; margin-bottom: 20px; font-size: 0.7em; }
@@ -28,8 +70,22 @@
     </style>
 </head>
 <body>
+
+    <div id="intro-screen">
+        <div id="intro-overlay"></div>
+        <div id="intro-content">
+            <p style="font-size: 1.5em; text-decoration: underline;">You are to be hanged at dawn.</p>
+            <p>The Major-General of Bearmond was found murdered in his villa earlier this evening. You were found on the premises, your hands drenched in blood.</p>
+            <p>With no other suspects in sight, you were sentenced to hang at dawn. But first, you'll spend the night in jail ruminating on your fate.</p>
+            <p>The jailor, Dorn, watches you with beady, suspicious eyes from his desk across from your cell.</p>
+            <p>You have but a few hours to escape and prove your innocence.</p>
+            <p style="font-size: 1.2em; color: #fff; margin-top: 20px;">Welcome to Ironbound RPG.</p>
+            <button id="start-btn" onclick="startGame()">ENTER THE CELL</button>
+        </div>
+    </div>
+
     <audio id="bg-music" loop><source src="creepy-ambient.mp3" type="audio/mpeg"></audio>
-    <div id="character-layer" id="dorn-portrait"></div>
+    <div id="character-layer"></div>
     <div id="terminal">
         <div id="header">
             <div>PERSONAENGINE v1.7</div>
@@ -48,6 +104,19 @@
         const output = document.getElementById('output');
         const bgMusic = document.getElementById('bg-music');
         const charLayer = document.getElementById('character-layer');
+        const intro = document.getElementById('intro-screen');
+
+        function startGame() {
+            // Fade out the intro
+            intro.style.opacity = '0';
+            setTimeout(() => { intro.style.visibility = 'hidden'; }, 2000);
+            
+            // Start music
+            if (bgMusic.paused) { 
+                bgMusic.play().catch(() => {}); 
+                bgMusic.volume = 0.12; 
+            }
+        }
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -56,8 +125,6 @@
             input.value = '';
             output.textContent += `\n\n> ${message}`;
             
-            if (bgMusic.paused) { bgMusic.play().catch(() => {}); bgMusic.volume = 0.12; }
-
             try {
                 const res = await fetch('/api/chat', {
                     method: 'POST',
@@ -70,13 +137,8 @@
 
                 if (data.audio) {
                     const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
-                    
-                    // LIGHT UP DORN WHEN AUDIO STARTS
                     audio.onplay = () => { charLayer.classList.add('speaking'); };
-                    
-                    // FADE DORN WHEN AUDIO ENDS
                     audio.onended = () => { charLayer.classList.remove('speaking'); };
-                    
                     audio.play();
                 }
 
