@@ -5,85 +5,30 @@
     <title>IRONBOUND RPG | PersonaEngine</title>
     <link href="https://fonts.googleapis.com/css2?family=Pirata+One&display=swap" rel="stylesheet">
     <style>
-        /* 1. GLOBAL RESET */
         * { box-sizing: border-box; }
-        body, html { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            background: #000; overflow: hidden; 
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+        body { background: #000 url('cell-bg.jpg') no-repeat center center; background-size: cover; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; }
 
-        /* 2. THE INTRO OVERLAY (FORCED TO FRONT) */
-        #intro-screen {
-            position: fixed; top: 0; left: 0; 
-            width: 100vw; height: 100vh;
-            background: #000; /* Solid Black */
-            z-index: 99999; 
-            display: flex; flex-direction: column; 
-            justify-content: center; align-items: center;
-            opacity: 1; visibility: visible;
-            transition: opacity 1.5s ease, visibility 1.5s;
-        }
+        /* INTRO OVERLAY */
+        #intro-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; transition: opacity 1.5s ease; }
+        #intro-container { max-width: 800px; width: 90%; color: #cc0000; font-family: 'Pirata One', serif; text-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
+        #intro-container h1 { font-size: 2.5rem; text-decoration: underline; }
+        #intro-container p { font-size: 1.3rem; line-height: 1.2; margin: 15px 0; }
+        #player-name-input { background: #110000; border: 2px solid #cc0000; color: #fff; padding: 12px; font-size: 1rem; width: 300px; text-align: center; outline: none; margin: 15px 0; }
+        #start-btn { background: #300; border: 2px solid #cc0000; color: #cc0000; padding: 12px 50px; font-family: 'Pirata One', serif; font-size: 1.5rem; cursor: pointer; text-transform: uppercase; }
 
-        #intro-container {
-            max-width: 800px; width: 90%;
-            max-height: 95vh; /* Prevents pushing buttons off screen */
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            color: #cc0000; font-family: 'Pirata One', serif;
-            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-        }
-
-        #intro-text-area {
-            overflow-y: auto; /* Scroll if text is too long for screen */
-            margin-bottom: 20px;
-            padding: 10px;
-        }
-
-        #intro-container h1 { font-size: 2.5rem; margin: 0 0 15px 0; text-decoration: underline; }
-        #intro-container p { font-size: 1.3rem; line-height: 1.2; margin: 10px 0; }
-
-        /* INPUT & BUTTON STYLING */
-        #player-name-input { 
-            background: #110000; border: 2px solid #cc0000; 
-            color: #fff; font-family: 'Courier New', monospace; 
-            padding: 12px; font-size: 1rem; width: 280px; 
-            text-align: center; outline: none; margin-bottom: 15px;
-        }
-
-        #start-btn {
-            background: #300; border: 2px solid #cc0000;
-            color: #cc0000; padding: 12px 50px; font-family: 'Pirata One', serif;
-            font-size: 1.5rem; cursor: pointer; transition: 0.3s;
-            text-transform: uppercase;
-        }
-        #start-btn:hover { background: #cc0000; color: #000; box-shadow: 0 0 20px #f00; }
-
-        /* 3. THE GAME WORLD */
-        #game-world {
-            position: absolute; width: 100%; height: 100%;
-            background: url('cell-bg.jpg') no-repeat center center;
-            background-size: cover;
-            display: flex; justify-content: center; align-items: center;
-        }
-
-        #character-layer { 
-            position: absolute; bottom: -50px; right: -5%; 
-            width: 80%; height: 110vh; 
-            background: url('dorn.png') no-repeat bottom right; 
-            background-size: contain; 
-            opacity: 0; filter: brightness(0.4) grayscale(40%); 
-            z-index: 5; pointer-events: none; transition: opacity 2s ease; 
-        }
+        /* GAME ASSETS */
+        #character-layer { position: absolute; bottom: -50px; right: -5%; width: 80%; height: 110vh; background: url('dorn.png') no-repeat bottom right; background-size: contain; opacity: 0; filter: brightness(0.4) grayscale(40%); z-index: 5; pointer-events: none; transition: opacity 2s ease, filter 0.3s ease; }
         #character-layer.visible { opacity: 1; }
         #character-layer.speaking { filter: brightness(1.1) grayscale(0%); }
 
-        #terminal { 
-            width: 100%; max-width: 650px; height: 85vh; 
-            background: rgba(10, 10, 10, 0.95); border: 1px solid #22ff22; 
-            padding: 25px; display: flex; flex-direction: column; 
-            z-index: 10; margin-right: 35%; box-shadow: 0 0 20px rgba(34, 255, 34, 0.2);
-        }
+        /* INVENTORY SYSTEM */
+        #inventory { position: absolute; top: 20px; right: 20px; width: 120px; height: 120px; background: rgba(0,0,0,0.8); border: 1px solid #cc0000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; opacity: 0.5; transition: all 0.5s; }
+        #inventory.has-item { opacity: 1; box-shadow: 0 0 15px #cc0000; border: 2px solid #cc0000; }
+        #item-slot { width: 60px; height: 60px; background: url('ring.png') no-repeat center center; background-size: contain; display: none; filter: drop-shadow(0 0 5px #f00); }
+        #inventory-label { font-size: 0.6rem; color: #cc0000; margin-top: 5px; font-family: 'Courier New'; font-weight: bold; }
 
+        #terminal { width: 100%; max-width: 650px; height: 85vh; background: rgba(10, 10, 10, 0.95); border: 1px solid #22ff22; padding: 25px; display: flex; flex-direction: column; z-index: 10; margin-right: 35%; box-shadow: 0 0 20px rgba(34, 255, 34, 0.2); }
         #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 10px; margin-bottom: 20px; font-size: 0.8rem; color: #22ff22; }
         #output { flex-grow: 1; overflow-y: auto; color: #22ff22; white-space: pre-wrap; font-family: 'Courier New', monospace; line-height: 1.5; scrollbar-width: none; }
         #input-form { display: flex; border-top: 1px solid #22ff22; padding-top: 15px; }
@@ -94,77 +39,70 @@
 
     <div id="intro-screen">
         <div id="intro-container">
-            <div id="intro-text-area">
-                <h1>You are to be hanged at dawn.</h1>
-                <p>The Major-General of Bearmond was found murdered in his villa earlier this evening. You were found on the premises, your hands drenched in blood.</p>
-                <p>With no other suspects in sight, you were sentenced to hang at dawn. But first, you'll spend the night in jail ruminating on your fate.</p>
-                <p>The jailor, Dorn, watches you with beady, suspicious eyes from his desk across from your cell.</p>
-                <p>You have but a few hours to escape and prove your innocence.</p>
-                <p style="color: #fff;">Welcome to Ironbound RPG.</p>
-            </div>
-            
+            <h1>You are to be hanged at dawn.</h1>
+            <p>The Major-General of Bearmond was found murdered in his villa earlier this evening. You were found on the premises, your hands drenched in blood.</p>
+            <p>You have but a few hours to escape and prove your innocence.</p>
             <input type="text" id="player-name-input" placeholder="ENTER YOUR NAME" maxlength="15">
+            <br>
             <button id="start-btn">ENTER THE CELL</button>
         </div>
     </div>
 
-    <div id="game-world">
-        <audio id="bg-music" loop><source src="creepy-ambient.mp3" type="audio/mpeg"></audio>
-        <div id="character-layer"></div>
+    <div id="inventory">
+        <div id="item-slot"></div>
+        <div id="inventory-label">INVENTORY</div>
+    </div>
 
-        <div id="terminal">
-            <div id="header">
-                <div>PERSONAENGINE // <span id="display-name">UNKNOWN</span></div>
-                <div>VOICE: <span id="v-diag" style="color:orange">READY</span> | EXEC: <span id="t-text">180m</span></div>
-            </div>
-            <div id="output">SYSTEM READY... [ WAITING FOR INPUT ]</div>
-            <form id="input-form">
-                <span style="margin-right:10px; color: #22ff22;">></span>
-                <input type="text" id="user-input" autofocus autocomplete="off">
-            </form>
+    <audio id="bg-music" loop><source src="creepy-ambient.mp3" type="audio/mpeg"></audio>
+    <div id="character-layer"></div>
+
+    <div id="terminal">
+        <div id="header">
+            <div>PERSONAENGINE // <span id="display-name">UNKNOWN</span></div>
+            <div>VOICE: <span id="v-diag" style="color:orange">READY</span> | EXEC: <span id="t-text">180m</span></div>
         </div>
+        <div id="output"></div>
+        <form id="input-form">
+            <span style="margin-right:10px; color: #22ff22;">></span>
+            <input type="text" id="user-input" autofocus autocomplete="off">
+        </form>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const startBtn = document.getElementById('start-btn');
-            const intro = document.getElementById('intro-screen');
-            const charLayer = document.getElementById('character-layer');
-            const bgMusic = document.getElementById('bg-music');
-            const displayName = document.getElementById('display-name');
-            const nameInput = document.getElementById('player-name-input');
+            const output = document.getElementById('output');
             const userInput = document.getElementById('user-input');
+            const charLayer = document.getElementById('character-layer');
+            const inventory = document.getElementById('inventory');
+            const itemSlot = document.getElementById('item-slot');
             let currentPlayer = "Darren";
 
-            // 1. START GAME TRIGGER
-            startBtn.onclick = function() {
-                const nameIn = nameInput.value.trim();
+            startBtn.addEventListener('click', () => {
+                const nameIn = document.getElementById('player-name-input').value.trim();
                 if (nameIn) {
                     currentPlayer = nameIn;
-                    displayName.textContent = currentPlayer.toUpperCase();
+                    document.getElementById('display-name').textContent = currentPlayer.toUpperCase();
                 }
-                
-                intro.style.opacity = '0';
+                document.getElementById('intro-screen').style.opacity = '0';
                 setTimeout(() => { 
-                    intro.style.display = 'none'; 
-                    charLayer.classList.add('visible'); 
-                    userInput.focus(); // Autofocus the terminal when entering
+                    document.getElementById('intro-screen').style.display = 'none'; 
+                    charLayer.classList.add('visible');
+                    // THE NEW INTRO TEXT
+                    output.textContent = "SYSTEM READY...\n\n[ PROLOGUE ]\nYou awaken dazed and confused from the beating the guards gave you as they threw you into your cell. Your head throbs. You should probably search around to see if you can find anything of use.";
+                    userInput.focus();
                 }, 1500);
+                const bgMusic = document.getElementById('bg-music');
+                if (bgMusic) { bgMusic.play().catch(() => {}); bgMusic.volume = 0.15; }
+            });
 
-                if (bgMusic) { 
-                    bgMusic.play().catch(() => {}); 
-                    bgMusic.volume = 0.15; 
-                }
-            };
-
-            // 2. CHAT HANDLER
-            document.getElementById('input-form').onsubmit = async (e) => {
+            document.getElementById('input-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const output = document.getElementById('output');
                 const message = userInput.value.trim();
                 if (!message) return;
                 userInput.value = '';
                 output.textContent += `\n\n> ${message}`;
+                output.scrollTop = output.scrollHeight; // Autoscroll on send
 
                 try {
                     const res = await fetch('/api/chat', {
@@ -176,6 +114,12 @@
                     
                     document.getElementById('v-diag').textContent = data.voice_diag;
 
+                    // INVENTORY UPDATE
+                    if (data.has_ring) {
+                        inventory.classList.add('has-item');
+                        itemSlot.style.display = 'block';
+                    }
+
                     if (data.audio) {
                         const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
                         audio.onplay = () => charLayer.classList.add('speaking');
@@ -184,19 +128,13 @@
                     }
 
                     output.textContent += `\n\n${data.reply}`;
-
-                    if (data.is_escaped) {
-                        output.textContent += "\n\n[ CHAPTER ONE COMPLETE. YOU STEP INTO THE COURTYARD... ]";
-                        document.getElementById('terminal').style.opacity = '0.4';
-                        document.getElementById('terminal').style.pointerEvents = 'none';
-                    }
-
+                    if (data.is_escaped) { output.textContent += "\n\n[ CHAPTER ONE COMPLETE. ]"; }
                     if (data.minutes_left) document.getElementById('t-text').textContent = data.minutes_left + "m";
-                    output.scrollTop = output.scrollHeight;
-                } catch (err) {
-                    output.textContent += "\n\n[ CONNECTION ERROR ]";
-                }
-            };
+                    
+                    // AUTOSCROLL ON RECEIVE
+                    setTimeout(() => { output.scrollTop = output.scrollHeight; }, 50);
+                } catch (err) { output.textContent += "\n\n[ CONNECTION ERROR ]"; }
+            });
         });
     </script>
 </body>
