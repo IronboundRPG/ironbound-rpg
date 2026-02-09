@@ -5,16 +5,97 @@
     <title>IRONBOUND RPG | PersonaEngine</title>
     <link href="https://fonts.googleapis.com/css2?family=Pirata+One&display=swap" rel="stylesheet">
     <style>
-        body { background: #000 url('cell-bg.jpg') no-repeat center center; background-size: cover; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; color: #22ff22; height: 100vh; overflow: hidden; display: flex; justify-content: center; align-items: center; }
-        #intro-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.92); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; transition: opacity 2s ease, visibility 2s; }
-        #intro-content { max-width: 750px; padding: 40px; color: #cc0000; font-family: 'Pirata One', system-ui; font-size: 1.6em; line-height: 1.3; text-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
-        #player-name-input { background: rgba(20,0,0,0.5); border: 1px solid #cc0000; color: #fff; font-family: 'Courier New'; padding: 10px; font-size: 0.8em; width: 250px; text-align: center; outline: none; margin-top: 20px; }
-        #start-btn { margin-top: 20px; background: transparent; border: 1px solid #cc0000; color: #cc0000; padding: 10px 40px; font-family: 'Pirata One', serif; font-size: 1.2em; cursor: pointer; transition: all 0.3s; }
+        body { 
+            background: #000 url('cell-bg.jpg') no-repeat center center; 
+            background-size: cover;
+            margin: 0; padding: 0; 
+            font-family: 'Courier New', Courier, monospace; 
+            color: #22ff22; 
+            height: 100vh; overflow: hidden; 
+            display: flex; justify-content: center; align-items: center; 
+        }
+
+        /* THE INTRO SCREEN */
+        #intro-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.92); 
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            transition: opacity 2s ease, visibility 2s;
+        }
+
+        #intro-content {
+            max-width: 800px;
+            padding: 40px;
+            color: #cc0000; /* Blood Red */
+            font-family: 'Pirata One', system-ui;
+            font-size: 1.6em;
+            line-height: 1.3;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        #player-name-input { 
+            background: rgba(20,0,0,0.5); 
+            border: 1px solid #cc0000; 
+            color: #fff; 
+            font-family: 'Courier New'; 
+            padding: 10px; 
+            font-size: 0.8em; 
+            width: 250px; 
+            text-align: center; 
+            outline: none; 
+            margin-top: 20px; 
+        }
+
+        #start-btn {
+            margin-top: 20px;
+            background: transparent;
+            border: 1px solid #cc0000;
+            color: #cc0000;
+            padding: 10px 40px;
+            font-family: 'Pirata One', serif;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
         #start-btn:hover { background: #cc0000; color: black; box-shadow: 0 0 15px #cc0000; }
-        #character-layer { position: absolute; bottom: -50px; right: -5%; width: 85%; height: 110vh; background: url('dorn.png') no-repeat bottom right; background-size: contain; opacity: 0; filter: brightness(0.4) grayscale(30%); z-index: 5; pointer-events: none; transition: opacity 2.2s ease, filter 0.3s ease; }
+
+        /* THE CHARACTER LAYER */
+        #character-layer { 
+            position: absolute; 
+            bottom: -50px; 
+            right: -5%; 
+            width: 85%; 
+            height: 110vh; 
+            background: url('dorn.png') no-repeat bottom right; /* SWAPPED TO PNG */
+            background-size: contain; 
+            opacity: 0; 
+            filter: brightness(0.4) grayscale(30%); 
+            z-index: 5; 
+            pointer-events: none; 
+            transition: opacity 2.2s ease, filter 0.3s ease; 
+        }
         #character-layer.visible { opacity: 1; }
         #character-layer.speaking { filter: brightness(1.1) grayscale(0%); }
-        #terminal { width: 100%; max-width: 650px; height: 85vh; background: rgba(10, 10, 10, 0.92); border: 1px solid #22ff22; padding: 25px; display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(34, 255, 34, 0.2); position: relative; z-index: 10; backdrop-filter: blur(12px); margin-right: 40%; }
+
+        /* THE TERMINAL */
+        #terminal { 
+            width: 100%; max-width: 650px; height: 85vh; 
+            background: rgba(10, 10, 10, 0.92); 
+            border: 1px solid #22ff22; padding: 25px; 
+            display: flex; flex-direction: column; 
+            box-shadow: 0 0 20px rgba(34, 255, 34, 0.2); 
+            position: relative; z-index: 10; 
+            backdrop-filter: blur(12px); 
+            margin-right: 40%; 
+        }
+
         #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 10px; margin-bottom: 20px; font-size: 0.7em; }
         #output { flex-grow: 1; overflow-y: auto; white-space: pre-wrap; margin-bottom: 20px; line-height: 1.5; text-shadow: 0 0 5px #22ff22; scrollbar-width: none; }
         #input-form { display: flex; border-top: 1px solid #22ff22; padding-top: 15px; }
@@ -22,64 +103,12 @@
     </style>
 </head>
 <body>
+
     <div id="intro-screen">
         <div id="intro-content">
-            <p style="font-size: 1.4em; text-decoration: underline;">You are to be hanged at dawn.</p>
-            <p>Sentenced to hang, you spend your final hours in jail.</p>
-            <input type="text" id="player-name-input" placeholder="ENTER YOUR NAME" maxlength="15">
-            <br>
-            <button id="start-btn" onclick="startGame()">ENTER THE CELL</button>
-        </div>
-    </div>
-    <audio id="bg-music" loop><source src="creepy-ambient.mp3" type="audio/mpeg"></audio>
-    <div id="character-layer"></div>
-    <div id="terminal">
-        <div id="header">
-            <div>PERSONAENGINE // <span id="display-name">UNKNOWN</span></div>
-            <div>VOICE: <span id="v-diag" style="color:orange">READY</span> | EXEC: <span id="t-text">180m</span></div>
-        </div>
-        <div id="output">SYSTEM INITIALIZED...</div>
-        <form id="input-form">
-            <span style="margin-right:10px">></span>
-            <input type="text" id="user-input" autofocus autocomplete="off" placeholder="Speak to the Jailor...">
-        </form>
-    </div>
-    <script>
-        let currentPlayer = "Darren";
-        function startGame() {
-            const nameIn = document.getElementById('player-name-input').value.trim();
-            if (nameIn) { currentPlayer = nameIn; document.getElementById('display-name').textContent = currentPlayer.toUpperCase(); }
-            document.getElementById('intro-screen').style.opacity = '0';
-            setTimeout(() => { document.getElementById('intro-screen').style.visibility = 'hidden'; document.getElementById('character-layer').classList.add('visible'); }, 2000);
-            const bgMusic = document.getElementById('bg-music');
-            if (bgMusic.paused) { bgMusic.play().catch(() => {}); bgMusic.volume = 0.15; }
-        }
-        document.getElementById('input-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const input = document.getElementById('user-input');
-            const output = document.getElementById('output');
-            const message = input.value.trim();
-            if (!message) return;
-            input.value = '';
-            output.textContent += `\n\n> ${message}`;
-            try {
-                const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message, playerName: currentPlayer }) });
-                const data = await res.json();
-                const diag = document.getElementById('v-diag');
-                diag.textContent = data.voice_diag;
-                diag.style.color = (data.voice_diag === "SUCCESS") ? "#22ff22" : "red";
-                if (data.audio) {
-                    const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
-                    audio.onplay = () => { document.getElementById('character-layer').classList.add('speaking'); };
-                    audio.onended = () => { document.getElementById('character-layer').classList.remove('speaking'); };
-                    audio.play();
-                }
-                output.textContent += `\n\n${data.reply}`;
-                if (data.is_escaped) { output.textContent += "\n\n[ CHAPTER ONE COMPLETE. ]"; }
-                if (data.minutes_left) document.getElementById('t-text').textContent = data.minutes_left + "m";
-                output.scrollTop = output.scrollHeight;
-            } catch (err) { output.textContent += "\n\n[ CONNECTION ERROR ]"; }
-        });
-    </script>
-</body>
-</html>
+            <p style="font-size: 1.5em; text-decoration: underline;">You are to be hanged at dawn.</p>
+            <p>The Major-General of Bearmond was found murdered in his villa earlier this evening. You were found on the premises, your hands drenched in blood.</p>
+            <p>With no other suspects in sight, you were sentenced to hang at dawn. But first, you'll spend the night in jail ruminating on your fate.</p>
+            <p>The jailor, Dorn, watches you with beady, suspicious eyes from his desk across from your cell.</p>
+            <p>You have but a few hours to escape and prove your innocence.</p>
+            <p style="color: #fff; margin-top: 20px
