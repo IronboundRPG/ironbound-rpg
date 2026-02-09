@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  const { message, playerName } = req.body;
+  const { message, playerName, voiceEnabled } = req.body;
 
   try {
     const dbHeaders = {
@@ -21,22 +21,22 @@ export default async function handler(req, res) {
         model: "openai/gpt-4o-mini",
         messages: [{ 
           role: "system", 
-          content: `You are Dorn the Jailor. Cockney, abusive.
+          content: `You are Dorn the Jailor. Cockney, abusive. 
           BACKSTORY: You know the prisoner was found in the villa where the Major-General of Bearmond was murdered earlier tonight. Their hands were drenched in blood. They are the only suspect and are due to hang at dawn.
           WORLD: HasRing=${state.has_bribe_item}, DoorLocked=${state.is_cell_locked}.
-          LOGIC:
-          1. If they search the straw and HasRing is false: End reply with TRIGGER_RING_FOUND.
-          2. If they offer the ring and HasRing is true: End reply with TRIGGER_CELL_OPEN.
-          3. If door is OPEN and they leave: End reply with TRIGGER_ESCAPE.
-          4. If they ask 'why am I here?' or similar: Remind them of the murdered Major-General and the blood on their hands.
-          VOICE: Short sentences. Use contractions.`
+          LOGIC RULES:
+          1. Only find the ring if they EXPLICITLY search the straw/cell. If found, end with TRIGGER_RING_FOUND.
+          2. IF state.has_bribe_item is true, you notice the ring. You want it. If they ask for help or freedom, hint that you'll let them go for the ring.
+          3. If they give/offer the ring, unlock the door. End with TRIGGER_CELL_OPEN.
+          4. If they leave the open cell, end with TRIGGER_ESCAPE.
+          VOICE: Short, punchy, predatory.`
         }, { role: "user", content: message }]
       })
     });
 
     const aiData = await aiResponse.json();
     let reply = aiData.choices[0]?.message?.content || "Dorn snorts.";
-    let updates = { minutes_left: Math.max(0, (state.minutes_left || 180) - 1) };
+    let updates = { minutes_left: Math.max(0, state.minutes_left - 1) };
     let escaped = false;
 
     if (reply.includes('TRIGGER_RING_FOUND')) {
@@ -47,9 +47,9 @@ export default async function handler(req, res) {
         updates.is_cell_locked = false;
         reply = reply.replace('TRIGGER_CELL_OPEN', '').trim();
     }
-    if (reply.includes('TRIGGER_ESCAPE')) {
+    if (reply.includes('TRIGGER_ESCAPE') && !state.is_cell_locked) {
         escaped = true;
-        reply = "Get out then, 'fore I change my mind.";
+        reply = "Off with ya then, before I change me mind.";
     }
 
     await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states`, {
@@ -58,9 +58,11 @@ export default async function handler(req, res) {
       body: JSON.stringify({ ...state, ...updates })
     });
 
+    // SELECTIVE VOICE CALL
     let audioBase64 = null;
-    let voiceStatus = "OFFLINE";
-    if (process.env.ELEVENLABS_API_KEY) {
+    let voiceStatus = voiceEnabled ? "ATTEMPTING" : "MUTED";
+
+    if (voiceEnabled && process.env.ELEVENLABS_API_KEY) {
       const vRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/1TE7ou3jyxHsyRehUuMB`, {
         method: "POST",
         headers: { "xi-api-key": process.env.ELEVENLABS_API_KEY, "Content-Type": "application/json" },
@@ -74,14 +76,11 @@ export default async function handler(req, res) {
     }
 
     res.status(200).json({ 
-        reply, 
-        audio: audioBase64, 
-        voice_diag: voiceStatus, 
-        has_ring: updates.has_bribe_item || state.has_bribe_item,
-        is_locked: updates.is_cell_locked ?? state.is_cell_locked,
-        is_escaped: escaped,
-        minutes_left: updates.minutes_left
+        reply, audio: audioBase64, voice_diag: voiceStatus, 
+        has_ring: updates.has_bribe_item || state.has_bribe_item, 
+        is_escaped: escaped, 
+        minutes_left: updates.minutes_left 
     });
 
-  } catch (err) { res.status(200).json({ reply: `[SYSTEM_SIGNAL_INTERRUPTED]` }); }
+  } catch (err) { res.status(200).json({ reply: `[DORN_ERROR: ${err.message}]` }); }
 }
