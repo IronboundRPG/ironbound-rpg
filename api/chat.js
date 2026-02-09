@@ -21,13 +21,15 @@ export default async function handler(req, res) {
         model: "openai/gpt-4o-mini",
         messages: [{ 
           role: "system", 
-          content: `You are Dorn the Jailor. Cockney, abusive. 
+          content: `You are Dorn the Jailor. Cockney, abusive.
+          BACKSTORY: You know the prisoner was found in the villa where the Major-General of Bearmond was murdered earlier tonight. Their hands were drenched in blood. They are the only suspect and are due to hang at dawn.
           WORLD: HasRing=${state.has_bribe_item}, DoorLocked=${state.is_cell_locked}.
-          LOGIC RULES:
-          1. If player searches the cell/straw, and HasRing is false: End reply with TRIGGER_RING_FOUND.
-          2. If player offers the ring, and HasRing is true: You accept it greedily. End reply with TRIGGER_CELL_OPEN.
-          3. If DoorLocked is false and they leave: End reply with TRIGGER_ESCAPE.
-          4. NEVER prompt them to search. Let them figure it out.` 
+          LOGIC:
+          1. If they search the straw and HasRing is false: End reply with TRIGGER_RING_FOUND.
+          2. If they offer the ring and HasRing is true: End reply with TRIGGER_CELL_OPEN.
+          3. If door is OPEN and they leave: End reply with TRIGGER_ESCAPE.
+          4. If they ask 'why am I here?' or similar: Remind them of the murdered Major-General and the blood on their hands.
+          VOICE: Short sentences. Use contractions.`
         }, { role: "user", content: message }]
       })
     });
@@ -37,7 +39,6 @@ export default async function handler(req, res) {
     let updates = { minutes_left: Math.max(0, (state.minutes_left || 180) - 1) };
     let escaped = false;
 
-    // Trigger Processing
     if (reply.includes('TRIGGER_RING_FOUND')) {
         updates.has_bribe_item = true;
         reply = reply.replace('TRIGGER_RING_FOUND', '').trim();
@@ -51,14 +52,12 @@ export default async function handler(req, res) {
         reply = "Get out then, 'fore I change my mind.";
     }
 
-    // PERSIST
     await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states`, {
       method: "POST",
       headers: { ...dbHeaders, "Prefer": "resolution=merge-duplicates" },
       body: JSON.stringify({ ...state, ...updates })
     });
 
-    // VOICE
     let audioBase64 = null;
     let voiceStatus = "OFFLINE";
     if (process.env.ELEVENLABS_API_KEY) {
@@ -80,8 +79,9 @@ export default async function handler(req, res) {
         voice_diag: voiceStatus, 
         has_ring: updates.has_bribe_item || state.has_bribe_item,
         is_locked: updates.is_cell_locked ?? state.is_cell_locked,
-        is_escaped: escaped
+        is_escaped: escaped,
+        minutes_left: updates.minutes_left
     });
 
-  } catch (err) { res.status(200).json({ reply: `[DORN_ERROR: ${err.message}]` }); }
+  } catch (err) { res.status(200).json({ reply: `[SYSTEM_SIGNAL_INTERRUPTED]` }); }
 }
