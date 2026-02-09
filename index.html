@@ -5,56 +5,60 @@
     <title>IRONBOUND RPG | PersonaEngine</title>
     <link href="https://fonts.googleapis.com/css2?family=Pirata+One&display=swap" rel="stylesheet">
     <style>
-        /* 1. FORCE THE OVERLAY TO THE ABSOLUTE FRONT */
+        /* 1. GLOBAL RESET */
+        * { box-sizing: border-box; }
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background: #000; overflow: hidden; 
+        }
+
+        /* 2. THE INTRO OVERLAY (FORCED TO FRONT) */
         #intro-screen {
-            position: fixed !important; 
-            top: 0; left: 0; 
+            position: fixed; top: 0; left: 0; 
             width: 100vw; height: 100vh;
-            background-color: #000 !important; /* Solid black until clicked */
-            z-index: 99999 !important; /* Higher than any other element */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            visibility: visible;
-            opacity: 1;
-            transition: opacity 1.5s ease;
+            background: #000; /* Solid Black */
+            z-index: 99999; 
+            display: flex; flex-direction: column; 
+            justify-content: center; align-items: center;
+            opacity: 1; visibility: visible;
+            transition: opacity 1.5s ease, visibility 1.5s;
         }
 
-        #intro-content {
-            max-width: 800px;
-            width: 90%;
-            color: #cc0000; 
-            font-family: 'Pirata One', 'Georgia', serif; /* Fallback font included */
-            text-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+        #intro-container {
+            max-width: 800px; width: 90%;
+            max-height: 95vh; /* Prevents pushing buttons off screen */
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            color: #cc0000; font-family: 'Pirata One', serif;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
         }
 
-        #intro-content h1 { font-size: 3rem; margin-bottom: 20px; text-decoration: underline; }
-        #intro-content p { font-size: 1.5rem; line-height: 1.4; margin: 15px 0; }
+        #intro-text-area {
+            overflow-y: auto; /* Scroll if text is too long for screen */
+            margin-bottom: 20px;
+            padding: 10px;
+        }
 
-        /* INPUT STYLING */
+        #intro-container h1 { font-size: 2.5rem; margin: 0 0 15px 0; text-decoration: underline; }
+        #intro-container p { font-size: 1.3rem; line-height: 1.2; margin: 10px 0; }
+
+        /* INPUT & BUTTON STYLING */
         #player-name-input { 
             background: #110000; border: 2px solid #cc0000; 
             color: #fff; font-family: 'Courier New', monospace; 
-            padding: 15px; font-size: 1.2rem; width: 300px; 
-            text-align: center; outline: none; margin: 25px 0;
+            padding: 12px; font-size: 1rem; width: 280px; 
+            text-align: center; outline: none; margin-bottom: 15px;
         }
 
         #start-btn {
             background: #300; border: 2px solid #cc0000;
-            color: #cc0000; padding: 15px 60px; font-family: 'Pirata One', serif;
-            font-size: 1.8rem; cursor: pointer; transition: 0.3s;
+            color: #cc0000; padding: 12px 50px; font-family: 'Pirata One', serif;
+            font-size: 1.5rem; cursor: pointer; transition: 0.3s;
+            text-transform: uppercase;
         }
-        #start-btn:hover { background: #cc0000; color: #000; box-shadow: 0 0 30px #f00; }
+        #start-btn:hover { background: #cc0000; color: #000; box-shadow: 0 0 20px #f00; }
 
-        /* 2. BACKGROUND & GAME ELEMENTS (HIDDEN INITIALLY) */
-        body { 
-            margin: 0; padding: 0; background: #000; 
-            height: 100vh; width: 100vw; overflow: hidden;
-            display: flex; justify-content: center; align-items: center;
-        }
-
+        /* 3. THE GAME WORLD */
         #game-world {
             position: absolute; width: 100%; height: 100%;
             background: url('cell-bg.jpg') no-repeat center center;
@@ -63,8 +67,10 @@
         }
 
         #character-layer { 
-            position: absolute; bottom: -50px; right: -5%; width: 80%; height: 110vh; 
-            background: url('dorn.png') no-repeat bottom right; background-size: contain; 
+            position: absolute; bottom: -50px; right: -5%; 
+            width: 80%; height: 110vh; 
+            background: url('dorn.png') no-repeat bottom right; 
+            background-size: contain; 
             opacity: 0; filter: brightness(0.4) grayscale(40%); 
             z-index: 5; pointer-events: none; transition: opacity 2s ease; 
         }
@@ -87,8 +93,111 @@
 <body>
 
     <div id="intro-screen">
-        <div id="intro-content">
-            <h1>You are to be hanged at dawn.</h1>
-            <p>The Major-General of Bearmond was found murdered in his villa earlier this evening. You were found on the premises, your hands drenched in blood.</p>
-            <p>With no other suspects in sight, you were sentenced to hang at dawn. But first, you'll spend the night in jail ruminating on your fate.</p>
-            <p>The jailor, Dorn, watches you with beady, suspicious eyes from his
+        <div id="intro-container">
+            <div id="intro-text-area">
+                <h1>You are to be hanged at dawn.</h1>
+                <p>The Major-General of Bearmond was found murdered in his villa earlier this evening. You were found on the premises, your hands drenched in blood.</p>
+                <p>With no other suspects in sight, you were sentenced to hang at dawn. But first, you'll spend the night in jail ruminating on your fate.</p>
+                <p>The jailor, Dorn, watches you with beady, suspicious eyes from his desk across from your cell.</p>
+                <p>You have but a few hours to escape and prove your innocence.</p>
+                <p style="color: #fff;">Welcome to Ironbound RPG.</p>
+            </div>
+            
+            <input type="text" id="player-name-input" placeholder="ENTER YOUR NAME" maxlength="15">
+            <button id="start-btn">ENTER THE CELL</button>
+        </div>
+    </div>
+
+    <div id="game-world">
+        <audio id="bg-music" loop><source src="creepy-ambient.mp3" type="audio/mpeg"></audio>
+        <div id="character-layer"></div>
+
+        <div id="terminal">
+            <div id="header">
+                <div>PERSONAENGINE // <span id="display-name">UNKNOWN</span></div>
+                <div>VOICE: <span id="v-diag" style="color:orange">READY</span> | EXEC: <span id="t-text">180m</span></div>
+            </div>
+            <div id="output">SYSTEM READY... [ WAITING FOR INPUT ]</div>
+            <form id="input-form">
+                <span style="margin-right:10px; color: #22ff22;">></span>
+                <input type="text" id="user-input" autofocus autocomplete="off">
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const startBtn = document.getElementById('start-btn');
+            const intro = document.getElementById('intro-screen');
+            const charLayer = document.getElementById('character-layer');
+            const bgMusic = document.getElementById('bg-music');
+            const displayName = document.getElementById('display-name');
+            const nameInput = document.getElementById('player-name-input');
+            const userInput = document.getElementById('user-input');
+            let currentPlayer = "Darren";
+
+            // 1. START GAME TRIGGER
+            startBtn.onclick = function() {
+                const nameIn = nameInput.value.trim();
+                if (nameIn) {
+                    currentPlayer = nameIn;
+                    displayName.textContent = currentPlayer.toUpperCase();
+                }
+                
+                intro.style.opacity = '0';
+                setTimeout(() => { 
+                    intro.style.display = 'none'; 
+                    charLayer.classList.add('visible'); 
+                    userInput.focus(); // Autofocus the terminal when entering
+                }, 1500);
+
+                if (bgMusic) { 
+                    bgMusic.play().catch(() => {}); 
+                    bgMusic.volume = 0.15; 
+                }
+            };
+
+            // 2. CHAT HANDLER
+            document.getElementById('input-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const output = document.getElementById('output');
+                const message = userInput.value.trim();
+                if (!message) return;
+                userInput.value = '';
+                output.textContent += `\n\n> ${message}`;
+
+                try {
+                    const res = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message, playerName: currentPlayer })
+                    });
+                    const data = await res.json();
+                    
+                    document.getElementById('v-diag').textContent = data.voice_diag;
+
+                    if (data.audio) {
+                        const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
+                        audio.onplay = () => charLayer.classList.add('speaking');
+                        audio.onended = () => charLayer.classList.remove('speaking');
+                        audio.play();
+                    }
+
+                    output.textContent += `\n\n${data.reply}`;
+
+                    if (data.is_escaped) {
+                        output.textContent += "\n\n[ CHAPTER ONE COMPLETE. YOU STEP INTO THE COURTYARD... ]";
+                        document.getElementById('terminal').style.opacity = '0.4';
+                        document.getElementById('terminal').style.pointerEvents = 'none';
+                    }
+
+                    if (data.minutes_left) document.getElementById('t-text').textContent = data.minutes_left + "m";
+                    output.scrollTop = output.scrollHeight;
+                } catch (err) {
+                    output.textContent += "\n\n[ CONNECTION ERROR ]";
+                }
+            };
+        });
+    </script>
+</body>
+</html>
