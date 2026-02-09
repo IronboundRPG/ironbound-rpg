@@ -9,7 +9,7 @@
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
         body { background: #000 url('cell-bg.jpg') no-repeat center center; background-size: cover; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; }
 
-        /* INTRO OVERLAY */
+        /* INTRO */
         #intro-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; transition: opacity 1.5s ease; }
         #intro-container { max-width: 800px; width: 90%; color: #cc0000; font-family: 'Pirata One', serif; text-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
         #intro-container h1 { font-size: 2.5rem; text-decoration: underline; }
@@ -17,34 +17,22 @@
         #player-name-input { background: #110000; border: 2px solid #cc0000; color: #fff; padding: 12px; font-size: 1rem; width: 300px; text-align: center; outline: none; margin: 15px 0; }
         #start-btn { background: #300; border: 2px solid #cc0000; color: #cc0000; padding: 12px 50px; font-family: 'Pirata One', serif; font-size: 1.5rem; cursor: pointer; text-transform: uppercase; }
 
-        /* GAME ASSETS */
+        /* GAME */
         #character-layer { position: absolute; bottom: -50px; right: -5%; width: 80%; height: 110vh; background: url('dorn.png') no-repeat bottom right; background-size: contain; opacity: 0; filter: brightness(0.4) grayscale(40%); z-index: 5; pointer-events: none; transition: opacity 2s ease, filter 0.3s ease; }
         #character-layer.visible { opacity: 1; }
         #character-layer.speaking { filter: brightness(1.1) grayscale(0%); }
 
-        /* LARGER INVENTORY SYSTEM */
+        /* ENLARGED INVENTORY */
         #inventory { 
             position: absolute; top: 30px; right: 30px; 
-            width: 160px; height: 180px; 
-            background: rgba(0,0,0,0.85); 
-            border: 1px solid #cc0000; 
-            display: flex; flex-direction: column; align-items: center; justify-content: space-around; 
-            z-index: 100; opacity: 0.6; transition: all 0.5s; 
-            padding: 10px;
+            width: 180px; height: 210px; 
+            background: rgba(0,0,0,0.9); border: 1px solid #cc0000; 
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between; 
+            z-index: 100; opacity: 0.4; transition: all 0.5s; padding: 15px;
         }
         #inventory.has-item { opacity: 1; box-shadow: 0 0 20px #cc0000; border: 2px solid #cc0000; }
-        
-        #inventory-title { font-size: 0.7rem; color: #cc0000; font-weight: bold; letter-spacing: 2px; }
-        
-        #item-slot { 
-            width: 100px; height: 100px; 
-            background: url('ring.png') no-repeat center center; 
-            background-size: contain; 
-            display: none; 
-            filter: drop-shadow(0 0 8px #f00); 
-        }
-        
-        #item-label { font-size: 0.75rem; color: #cc0000; font-family: 'Courier New'; font-weight: bold; text-align: center; }
+        .inv-label { font-size: 0.8rem; color: #cc0000; font-weight: bold; font-family: 'Courier New'; text-transform: uppercase; }
+        #item-slot { width: 110px; height: 110px; background: url('ring.png') no-repeat center center; background-size: contain; display: none; filter: drop-shadow(0 0 10px #f00); }
 
         /* TERMINAL */
         #terminal { width: 100%; max-width: 650px; height: 85vh; background: rgba(10, 10, 10, 0.95); border: 1px solid #22ff22; padding: 25px; display: flex; flex-direction: column; z-index: 10; margin-right: 35%; box-shadow: 0 0 20px rgba(34, 255, 34, 0.2); }
@@ -52,9 +40,10 @@
         #output { flex-grow: 1; overflow-y: auto; color: #22ff22; white-space: pre-wrap; font-family: 'Courier New', monospace; line-height: 1.5; scrollbar-width: none; }
         #input-form { display: flex; border-top: 1px solid #22ff22; padding-top: 15px; }
         #user-input { background: transparent; border: none; color: #22ff22; font-family: inherit; font-size: 1.1rem; flex-grow: 1; outline: none; }
-
-        /* YELLOW DISCOVERY TEXT */
+        
         .discovery { color: #ffff00; font-weight: bold; }
+        .mute-btn { cursor: pointer; border: 1px solid #22ff22; padding: 2px 8px; font-size: 0.7rem; margin-left: 10px; }
+        .mute-btn.active { background: #22ff22; color: #000; }
     </style>
 </head>
 <body>
@@ -62,18 +51,16 @@
     <div id="intro-screen">
         <div id="intro-container">
             <h1>You are to be hanged at dawn.</h1>
-            <p>The Major-General of Bearmond was found murdered in his villa earlier this evening. You were found on the premises, your hands drenched in blood.</p>
-            <p>You have but a few hours to escape and prove your innocence.</p>
-            <input type="text" id="player-name-input" placeholder="ENTER YOUR NAME" maxlength="15">
-            <br>
+            <p>The Major-General of Bearmond was found murdered. You were found with his blood on your hands. Sentenced to hang, you spend your final hours in jail.</p>
+            <input type="text" id="player-name-input" placeholder="ENTER YOUR NAME">
             <button id="start-btn">ENTER THE CELL</button>
         </div>
     </div>
 
     <div id="inventory">
-        <div id="inventory-title">INVENTORY</div>
+        <div class="inv-label">Inventory</div>
         <div id="item-slot"></div>
-        <div id="item-label">EMPTY</div>
+        <div id="item-label" class="inv-label">Empty</div>
     </div>
 
     <audio id="bg-music" loop><source src="creepy-ambient.mp3" type="audio/mpeg"></audio>
@@ -81,7 +68,7 @@
 
     <div id="terminal">
         <div id="header">
-            <div>PERSONAENGINE // <span id="display-name">UNKNOWN</span></div>
+            <div>PERSONAENGINE // <span id="display-name">UNKNOWN</span> <span id="mute-btn" class="mute-btn">VOICE: ON</span></div>
             <div>VOICE: <span id="v-diag" style="color:orange">READY</span> | EXEC: <span id="t-text">180m</span></div>
         </div>
         <div id="output"></div>
@@ -100,8 +87,17 @@
             const inventory = document.getElementById('inventory');
             const itemSlot = document.getElementById('item-slot');
             const itemLabel = document.getElementById('item-label');
+            const muteBtn = document.getElementById('mute-btn');
+            
             let currentPlayer = "Darren";
-            let hasRingUI = false; // To track if we've already shown the discovery message
+            let hasRingUI = false;
+            let voiceEnabled = true;
+
+            muteBtn.onclick = () => {
+                voiceEnabled = !voiceEnabled;
+                muteBtn.textContent = voiceEnabled ? "VOICE: ON" : "VOICE: OFF";
+                muteBtn.classList.toggle('active');
+            };
 
             startBtn.addEventListener('click', () => {
                 const nameIn = document.getElementById('player-name-input').value.trim();
@@ -113,7 +109,7 @@
                 setTimeout(() => { 
                     document.getElementById('intro-screen').style.display = 'none'; 
                     charLayer.classList.add('visible');
-                    output.innerHTML = "SYSTEM READY...<br><br>[ PROLOGUE ]<br>You awaken dazed and confused from the beating the guards gave you as they threw you into your cell. Your head throbs. You should probably search around to see if you can find anything of use.";
+                    output.innerHTML = "[ PROLOGUE ]<br>You awaken dazed and confused from the beating the guards gave you as they threw you into your cell. Your head throbs. You should probably search around to see if you can find anything of use.";
                     userInput.focus();
                 }, 1500);
                 const bgMusic = document.getElementById('bg-music');
@@ -132,22 +128,21 @@
                     const res = await fetch('/api/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message, playerName: currentPlayer })
+                        body: JSON.stringify({ message, playerName: currentPlayer, voiceEnabled })
                     });
                     const data = await res.json();
                     
                     document.getElementById('v-diag').textContent = data.voice_diag;
 
-                    // INVENTORY & YELLOW MESSAGE TRIGGER
                     if (data.has_ring && !hasRingUI) {
                         hasRingUI = true;
                         inventory.classList.add('has-item');
                         itemSlot.style.display = 'block';
-                        itemLabel.textContent = "SIGNET RING";
+                        itemLabel.textContent = "Signet Ring";
                         output.innerHTML += `<br><br><span class="discovery">You found an ornate Signet ring on the floor of the cell. No doubt it was left there by a previous occupant. It's a little dusty, but should polish up nicely on your clothes. Perhaps Dorn might be willing to let you go in exchange for it?</span>`;
                     }
 
-                    if (data.audio) {
+                    if (data.audio && voiceEnabled) {
                         const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
                         audio.onplay = () => charLayer.classList.add('speaking');
                         audio.onended = () => charLayer.classList.remove('speaking');
@@ -158,7 +153,8 @@
                     if (data.is_escaped) { output.innerHTML += "<br><br>[ CHAPTER ONE COMPLETE. ]"; }
                     if (data.minutes_left) document.getElementById('t-text').textContent = data.minutes_left + "m";
                     
-                    setTimeout(() => { output.scrollTop = output.scrollHeight; }, 50);
+                    // FORCED AUTOSCROLL
+                    setTimeout(() => { output.scrollTop = output.scrollHeight; }, 100);
                 } catch (err) { output.innerHTML += "<br><br>[ CONNECTION ERROR ]"; }
             });
         });
