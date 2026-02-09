@@ -22,17 +22,39 @@
         #character-layer.visible { opacity: 1; }
         #character-layer.speaking { filter: brightness(1.1) grayscale(0%); }
 
-        /* INVENTORY SYSTEM */
-        #inventory { position: absolute; top: 20px; right: 20px; width: 120px; height: 120px; background: rgba(0,0,0,0.8); border: 1px solid #cc0000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; opacity: 0.5; transition: all 0.5s; }
-        #inventory.has-item { opacity: 1; box-shadow: 0 0 15px #cc0000; border: 2px solid #cc0000; }
-        #item-slot { width: 60px; height: 60px; background: url('ring.png') no-repeat center center; background-size: contain; display: none; filter: drop-shadow(0 0 5px #f00); }
-        #inventory-label { font-size: 0.6rem; color: #cc0000; margin-top: 5px; font-family: 'Courier New'; font-weight: bold; }
+        /* LARGER INVENTORY SYSTEM */
+        #inventory { 
+            position: absolute; top: 30px; right: 30px; 
+            width: 160px; height: 180px; 
+            background: rgba(0,0,0,0.85); 
+            border: 1px solid #cc0000; 
+            display: flex; flex-direction: column; align-items: center; justify-content: space-around; 
+            z-index: 100; opacity: 0.6; transition: all 0.5s; 
+            padding: 10px;
+        }
+        #inventory.has-item { opacity: 1; box-shadow: 0 0 20px #cc0000; border: 2px solid #cc0000; }
+        
+        #inventory-title { font-size: 0.7rem; color: #cc0000; font-weight: bold; letter-spacing: 2px; }
+        
+        #item-slot { 
+            width: 100px; height: 100px; 
+            background: url('ring.png') no-repeat center center; 
+            background-size: contain; 
+            display: none; 
+            filter: drop-shadow(0 0 8px #f00); 
+        }
+        
+        #item-label { font-size: 0.75rem; color: #cc0000; font-family: 'Courier New'; font-weight: bold; text-align: center; }
 
+        /* TERMINAL */
         #terminal { width: 100%; max-width: 650px; height: 85vh; background: rgba(10, 10, 10, 0.95); border: 1px solid #22ff22; padding: 25px; display: flex; flex-direction: column; z-index: 10; margin-right: 35%; box-shadow: 0 0 20px rgba(34, 255, 34, 0.2); }
         #header { display: flex; justify-content: space-between; border-bottom: 1px solid #22ff22; padding-bottom: 10px; margin-bottom: 20px; font-size: 0.8rem; color: #22ff22; }
         #output { flex-grow: 1; overflow-y: auto; color: #22ff22; white-space: pre-wrap; font-family: 'Courier New', monospace; line-height: 1.5; scrollbar-width: none; }
         #input-form { display: flex; border-top: 1px solid #22ff22; padding-top: 15px; }
         #user-input { background: transparent; border: none; color: #22ff22; font-family: inherit; font-size: 1.1rem; flex-grow: 1; outline: none; }
+
+        /* YELLOW DISCOVERY TEXT */
+        .discovery { color: #ffff00; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -49,8 +71,9 @@
     </div>
 
     <div id="inventory">
+        <div id="inventory-title">INVENTORY</div>
         <div id="item-slot"></div>
-        <div id="inventory-label">INVENTORY</div>
+        <div id="item-label">EMPTY</div>
     </div>
 
     <audio id="bg-music" loop><source src="creepy-ambient.mp3" type="audio/mpeg"></audio>
@@ -76,7 +99,9 @@
             const charLayer = document.getElementById('character-layer');
             const inventory = document.getElementById('inventory');
             const itemSlot = document.getElementById('item-slot');
+            const itemLabel = document.getElementById('item-label');
             let currentPlayer = "Darren";
+            let hasRingUI = false; // To track if we've already shown the discovery message
 
             startBtn.addEventListener('click', () => {
                 const nameIn = document.getElementById('player-name-input').value.trim();
@@ -88,8 +113,7 @@
                 setTimeout(() => { 
                     document.getElementById('intro-screen').style.display = 'none'; 
                     charLayer.classList.add('visible');
-                    // THE NEW INTRO TEXT
-                    output.textContent = "SYSTEM READY...\n\n[ PROLOGUE ]\nYou awaken dazed and confused from the beating the guards gave you as they threw you into your cell. Your head throbs. You should probably search around to see if you can find anything of use.";
+                    output.innerHTML = "SYSTEM READY...<br><br>[ PROLOGUE ]<br>You awaken dazed and confused from the beating the guards gave you as they threw you into your cell. Your head throbs. You should probably search around to see if you can find anything of use.";
                     userInput.focus();
                 }, 1500);
                 const bgMusic = document.getElementById('bg-music');
@@ -101,8 +125,8 @@
                 const message = userInput.value.trim();
                 if (!message) return;
                 userInput.value = '';
-                output.textContent += `\n\n> ${message}`;
-                output.scrollTop = output.scrollHeight; // Autoscroll on send
+                output.innerHTML += `<br><br>> ${message}`;
+                output.scrollTop = output.scrollHeight;
 
                 try {
                     const res = await fetch('/api/chat', {
@@ -114,10 +138,13 @@
                     
                     document.getElementById('v-diag').textContent = data.voice_diag;
 
-                    // INVENTORY UPDATE
-                    if (data.has_ring) {
+                    // INVENTORY & YELLOW MESSAGE TRIGGER
+                    if (data.has_ring && !hasRingUI) {
+                        hasRingUI = true;
                         inventory.classList.add('has-item');
                         itemSlot.style.display = 'block';
+                        itemLabel.textContent = "SIGNET RING";
+                        output.innerHTML += `<br><br><span class="discovery">You found an ornate Signet ring on the floor of the cell. No doubt it was left there by a previous occupant. It's a little dusty, but should polish up nicely on your clothes. Perhaps Dorn might be willing to let you go in exchange for it?</span>`;
                     }
 
                     if (data.audio) {
@@ -127,13 +154,12 @@
                         audio.play();
                     }
 
-                    output.textContent += `\n\n${data.reply}`;
-                    if (data.is_escaped) { output.textContent += "\n\n[ CHAPTER ONE COMPLETE. ]"; }
+                    output.innerHTML += `<br><br>${data.reply}`;
+                    if (data.is_escaped) { output.innerHTML += "<br><br>[ CHAPTER ONE COMPLETE. ]"; }
                     if (data.minutes_left) document.getElementById('t-text').textContent = data.minutes_left + "m";
                     
-                    // AUTOSCROLL ON RECEIVE
                     setTimeout(() => { output.scrollTop = output.scrollHeight; }, 50);
-                } catch (err) { output.textContent += "\n\n[ CONNECTION ERROR ]"; }
+                } catch (err) { output.innerHTML += "<br><br>[ CONNECTION ERROR ]"; }
             });
         });
     </script>
