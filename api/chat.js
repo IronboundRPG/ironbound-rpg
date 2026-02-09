@@ -9,14 +9,12 @@ export default async function handler(req, res) {
       "Content-Type": "application/json"
     };
 
-    // 1. SESSION MANAGEMENT
     const userQuery = playerName || "Anonymous_Prisoner";
     const dbRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.${userQuery}&select=*`, { headers: dbHeaders });
     const dbData = await dbRes.json();
     let state = dbData[0] || { player_name: userQuery, minutes_left: 180, has_bribe_item: false, is_cell_locked: true };
     let newTime = Math.max(0, (state.minutes_left || 180) - 1);
 
-    // 2. AI PERSONA & ESCAPE LOGIC
     const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
@@ -26,9 +24,7 @@ export default async function handler(req, res) {
           role: "system", 
           content: `You are Dorn the Jailor. Cockney, abusive, predatory. 
           WORLD: Bribe=${state.has_bribe_item}, Door=${state.is_cell_locked ? 'LOCKED' : 'OPEN'}.
-          LOGIC: 
-          1. If they offer the ring AND door is LOCKED, unlock it and end with TRIGGER_CELL_OPEN.
-          2. If door is OPEN and they say they are leaving/stepping out, end with TRIGGER_ESCAPE.
+          LOGIC: If door is OPEN and they say they are leaving, end with TRIGGER_ESCAPE.
           VOICE: Short sentences. Use contractions.` 
         }, { role: "user", content: message }]
       })
@@ -36,19 +32,9 @@ export default async function handler(req, res) {
 
     const aiData = await aiResponse.json();
     let reply = aiData.choices[0]?.message?.content || "Dorn snorts.";
-    let updates = { minutes_left: newTime };
-    let escapeTriggered = false;
+    let escapeTriggered = reply.includes('TRIGGER_ESCAPE');
+    if (escapeTriggered) reply = "Go on then, get out of my sight...";
 
-    if (reply.includes('TRIGGER_CELL_OPEN')) {
-        updates.is_cell_locked = false;
-        reply = reply.replace('TRIGGER_CELL_OPEN', '').trim();
-    }
-    if (reply.includes('TRIGGER_ESCAPE')) {
-        escapeTriggered = true;
-        reply = "Go on then, get out of my sight before I change my mind...";
-    }
-
-    // 3. ELEVENLABS VOICE (V2 MODEL)
     let audioBase64 = null;
     let voiceStatus = "OFFLINE";
 
@@ -59,7 +45,7 @@ export default async function handler(req, res) {
           headers: { "xi-api-key": process.env.ELEVENLABS_API_KEY, "Content-Type": "application/json" },
           body: JSON.stringify({
             text: reply,
-            model_id: "eleven_multilingual_v2",
+            model_id: "eleven_monolingual_v1", // SWITCHED TO V1 FOR FREE TIER
             voice_settings: { stability: 0.5, similarity_boost: 0.75 }
           })
         });
@@ -69,28 +55,19 @@ export default async function handler(req, res) {
           audioBase64 = Buffer.from(audioBuffer).toString('base64');
           voiceStatus = "SUCCESS";
         } else {
-          voiceStatus = `ERR_${voiceRes.status}`;
+          const errBody = await voiceRes.json();
+          voiceStatus = `ERR_${voiceRes.status}: ${errBody.detail?.message || 'Check Tier'}`;
         }
       } catch (e) { voiceStatus = "TIMEOUT"; }
     }
 
-    // 4. DATABASE PERSISTENCE
-    await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states`, {
+    await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states?player_name=eq.${userQuery}`, {
       method: "POST",
       headers: { ...dbHeaders, "Prefer": "resolution=merge-duplicates" },
-      body: JSON.stringify({ ...state, ...updates })
+      body: JSON.stringify({ ...state, minutes_left: newTime })
     });
 
-    res.status(200).json({ 
-        reply, 
-        audio: audioBase64, 
-        voice_diag: voiceStatus, 
-        minutes_left: newTime,
-        is_escaped: escapeTriggered,
-        is_locked: updates.is_cell_locked ?? state.is_cell_locked
-    });
+    res.status(200).json({ reply, audio: audioBase64, voice_diag: voiceStatus, minutes_left: newTime, is_escaped: escapeTriggered });
 
-  } catch (err) {
-    res.status(200).json({ reply: `[DORN_ERR: ${err.message}]` });
-  }
+  } catch (err) { res.status(200).json({ reply: `[DORN_SILENCED: ${err.message}]` }); }
 }
