@@ -21,13 +21,13 @@ export default async function handler(req, res) {
         model: "openai/gpt-4o-mini",
         messages: [{ 
           role: "system", 
-          content: `You are Dorn the Jailor. Cockney, abusive.
+          content: `You are Dorn the Jailor. Cockney, abusive. 
           WORLD: HasRing=${state.has_bribe_item}, DoorLocked=${state.is_cell_locked}.
-          LOGIC:
-          1. If they search the straw, they find a Signet Ring. Trigger: TRIGGER_RING_FOUND.
-          2. If they offer the ring, unlock the door. Trigger: TRIGGER_CELL_OPEN.
-          3. If door is OPEN and they leave, Trigger: TRIGGER_ESCAPE.
-          VOICE: Be brief. 2 sentences max.`
+          LOGIC RULES:
+          1. If player searches the cell/straw, and HasRing is false: End reply with TRIGGER_RING_FOUND.
+          2. If player offers the ring, and HasRing is true: You accept it greedily. End reply with TRIGGER_CELL_OPEN.
+          3. If DoorLocked is false and they leave: End reply with TRIGGER_ESCAPE.
+          4. NEVER prompt them to search. Let them figure it out.` 
         }, { role: "user", content: message }]
       })
     });
@@ -37,20 +37,30 @@ export default async function handler(req, res) {
     let updates = { minutes_left: Math.max(0, (state.minutes_left || 180) - 1) };
     let escaped = false;
 
-    if (reply.includes('TRIGGER_RING_FOUND')) { updates.has_bribe_item = true; reply = reply.replace('TRIGGER_RING_FOUND', ''); }
-    if (reply.includes('TRIGGER_CELL_OPEN')) { updates.is_cell_locked = false; reply = reply.replace('TRIGGER_CELL_OPEN', ''); }
-    if (reply.includes('TRIGGER_ESCAPE')) { escaped = true; reply = "Go on then, scarper."; }
+    // Trigger Processing
+    if (reply.includes('TRIGGER_RING_FOUND')) {
+        updates.has_bribe_item = true;
+        reply = reply.replace('TRIGGER_RING_FOUND', '').trim();
+    }
+    if (reply.includes('TRIGGER_CELL_OPEN')) {
+        updates.is_cell_locked = false;
+        reply = reply.replace('TRIGGER_CELL_OPEN', '').trim();
+    }
+    if (reply.includes('TRIGGER_ESCAPE')) {
+        escaped = true;
+        reply = "Get out then, 'fore I change my mind.";
+    }
 
-    // PERSIST TO SUPABASE
+    // PERSIST
     await fetch(`${process.env.SUPABASE_URL}/rest/v1/ironbound_states`, {
       method: "POST",
       headers: { ...dbHeaders, "Prefer": "resolution=merge-duplicates" },
       body: JSON.stringify({ ...state, ...updates })
     });
 
-    // ELEVENLABS V2
+    // VOICE
     let audioBase64 = null;
-    let vStat = "OFFLINE";
+    let voiceStatus = "OFFLINE";
     if (process.env.ELEVENLABS_API_KEY) {
       const vRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/1TE7ou3jyxHsyRehUuMB`, {
         method: "POST",
@@ -60,10 +70,18 @@ export default async function handler(req, res) {
       if (vRes.ok) {
         const buf = await vRes.arrayBuffer();
         audioBase64 = Buffer.from(buf).toString('base64');
-        vStat = "SUCCESS";
-      } else { vStat = `ERR_${vRes.status}`; }
+        voiceStatus = "SUCCESS";
+      } else { voiceStatus = `ERR_${vRes.status}`; }
     }
 
-    res.status(200).json({ reply: reply.trim(), audio: audioBase64, voice_diag: vStat, is_escaped: escaped, minutes_left: updates.minutes_left });
+    res.status(200).json({ 
+        reply, 
+        audio: audioBase64, 
+        voice_diag: voiceStatus, 
+        has_ring: updates.has_bribe_item || state.has_bribe_item,
+        is_locked: updates.is_cell_locked ?? state.is_cell_locked,
+        is_escaped: escaped
+    });
+
   } catch (err) { res.status(200).json({ reply: `[DORN_ERROR: ${err.message}]` }); }
 }
